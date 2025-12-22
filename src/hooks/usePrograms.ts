@@ -44,6 +44,8 @@ export interface PackageCreationData {
   seasonId: string | null;
   levelName: string | null;
   categoryName: string | null;
+  programNameOverrides?: Record<number, string>;
+  packageNameOverrides?: Record<number, string>;
 }
 
 export function usePrograms() {
@@ -171,6 +173,8 @@ export function useCreateProgramsWithPackages() {
         seasonId,
         levelName,
         categoryName,
+        programNameOverrides = {},
+        packageNameOverrides = {},
       } = data;
 
       // Generate all program dates
@@ -181,8 +185,10 @@ export function useCreateProgramsWithPackages() {
 
       const createdPackages: string[] = [];
       const createdPrograms: string[] = [];
+      let globalProgramIndex = 0;
 
-      for (const split of packageSplits) {
+      for (let pkgIndex = 0; pkgIndex < packageSplits.length; pkgIndex++) {
+        const split = packageSplits[pkgIndex];
         const packageDates = allDates.slice(split.startWeekIndex, split.endWeekIndex + 1);
         const packageStartDate = packageDates[0];
         const packageEndDate = packageDates[packageDates.length - 1];
@@ -191,8 +197,8 @@ export function useCreateProgramsWithPackages() {
         const calculatedPackagePrice = packagePerDayPrice * split.weeksCount;
         const finalPackagePrice = packagePriceOverride ?? calculatedPackagePrice;
 
-        // Create package name
-        const packageName = formatPackageName(
+        // Create package name (use override if available)
+        const generatedPackageName = formatPackageName(
           packageStartDate,
           packageEndDate,
           split.weeksCount,
@@ -201,6 +207,7 @@ export function useCreateProgramsWithPackages() {
           levelName,
           categoryName
         );
+        const packageName = packageNameOverrides[pkgIndex] ?? generatedPackageName;
 
         // Insert package
         const { data: pkg, error: pkgError } = await supabase
@@ -218,12 +225,13 @@ export function useCreateProgramsWithPackages() {
 
         // Create programs for this package
         for (const programDate of packageDates) {
-          const programName = formatProgramName(
+          const generatedProgramName = formatProgramName(
             programDate,
             startTime,
             endTime,
             levelName
           );
+          const programName = programNameOverrides[globalProgramIndex] ?? generatedProgramName;
 
           const dateStr = programDate.toISOString().split("T")[0];
 
@@ -257,6 +265,7 @@ export function useCreateProgramsWithPackages() {
             });
 
           if (linkError) throw linkError;
+          globalProgramIndex++;
         }
       }
 
