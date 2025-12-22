@@ -120,6 +120,9 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
     if (packageData.numberOfWeeks <= 0 || packageData.numberOfPackages <= 0) return null;
 
     const startDate = new Date(formData.date);
+    // Validate the date is actually valid
+    if (isNaN(startDate.getTime())) return null;
+    
     const programDates = generateProgramDates(startDate, packageData.numberOfWeeks);
     const packageSplits = splitWeeksIntoPackages(packageData.numberOfWeeks, packageData.numberOfPackages);
 
