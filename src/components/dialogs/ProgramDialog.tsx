@@ -240,7 +240,20 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
           <DialogTitle>{program ? "Edit Program" : "Add Program"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Reference Fields - Always show first */}
+          {/* Name field - Show first, only when NOT creating package */}
+          {(!createPackage || program) && (
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={formData.name || singleProgramNamePreview}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required={!createPackage}
+                placeholder={singleProgramNamePreview || "Program name"}
+              />
+            </div>
+          )}
+
+          {/* Reference Fields */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Location</Label>
@@ -329,28 +342,14 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
           </div>
 
           {/* Date field - Always show (used as start date for packages) */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>{createPackage ? "Start Date" : "Date"}</Label>
-              <Input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                required
-              />
-            </div>
-            {/* Name field - Only show when NOT creating package */}
-            {(!createPackage || program) && (
-              <div>
-                <Label>Name</Label>
-                <Input
-                  value={formData.name || singleProgramNamePreview}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required={!createPackage}
-                  placeholder={singleProgramNamePreview || "Program name"}
-                />
-              </div>
-            )}
+          <div>
+            <Label>{createPackage ? "Start Date" : "Date"}</Label>
+            <Input
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              required
+            />
           </div>
 
           {/* Single Program Fields - Only show when NOT creating package */}
