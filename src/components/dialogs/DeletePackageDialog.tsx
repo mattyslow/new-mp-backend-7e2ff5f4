@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, Calendar } from "lucide-react";
-import { format } from "date-fns";
 
 interface DeletePackageDialogProps {
   pkg: Package | null;
@@ -74,9 +73,7 @@ export function DeletePackageDialog({ pkg, open, onOpenChange }: DeletePackageDi
                     {programLinks.map((link) => (
                       <li key={link.id} className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
                         <Calendar className="h-3 w-3 flex-shrink-0" />
-                        <span className="truncate">
-                          {link.programs?.name} - {link.programs?.date ? format(parseLocalDate(link.programs.date), "MMM d, yyyy") : ""}
-                        </span>
+                        <span className="truncate">{link.programs?.name}</span>
                       </li>
                     ))}
                   </ul>
