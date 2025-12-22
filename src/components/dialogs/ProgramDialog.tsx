@@ -467,23 +467,8 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                 </div>
               </div>
 
-              {/* Package Pricing Mode */}
+              {/* Package Pricing */}
               <div className="space-y-3">
-                <RadioGroup
-                  value={pricingMode}
-                  onValueChange={(v) => setPricingMode(v as "perDay" | "override")}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="perDay" id="perDay" />
-                    <Label htmlFor="perDay" className="cursor-pointer">Per-Day Price</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="override" id="override" />
-                    <Label htmlFor="override" className="cursor-pointer">Override Price</Label>
-                  </div>
-                </RadioGroup>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>Individual Day Price</Label>
@@ -496,31 +481,47 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                       placeholder="Single session price"
                     />
                   </div>
-                  {pricingMode === "perDay" ? (
-                    <div>
-                      <Label>Package Per-Day Price</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={packageData.packagePerDayPrice}
-                        onChange={(e) => setPackageData({ ...packageData, packagePerDayPrice: parseFloat(e.target.value) || 0 })}
-                        placeholder="Discounted rate per day"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <Label>Package Price Override</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={packageData.packagePriceOverride}
-                        onChange={(e) => setPackageData({ ...packageData, packagePriceOverride: e.target.value })}
-                        placeholder="Fixed package price"
-                      />
-                    </div>
-                  )}
+                  <div>
+                    {pricingMode === "perDay" ? (
+                      <>
+                        <Label>Package Per-Day Price</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={packageData.packagePerDayPrice}
+                          onChange={(e) => setPackageData({ ...packageData, packagePerDayPrice: parseFloat(e.target.value) || 0 })}
+                          placeholder="Discounted rate per day"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Label>Package Price Override</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={packageData.packagePriceOverride}
+                          onChange={(e) => setPackageData({ ...packageData, packagePriceOverride: e.target.value })}
+                          placeholder="Fixed package price"
+                        />
+                      </>
+                    )}
+                    <RadioGroup
+                      value={pricingMode}
+                      onValueChange={(v) => setPricingMode(v as "perDay" | "override")}
+                      className="flex gap-4 mt-2"
+                    >
+                      <div className="flex items-center space-x-1">
+                        <RadioGroupItem value="perDay" id="perDay" />
+                        <Label htmlFor="perDay" className="cursor-pointer text-xs">Per-Day</Label>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <RadioGroupItem value="override" id="override" />
+                        <Label htmlFor="override" className="cursor-pointer text-xs">Override</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
                 </div>
 
                 <div>
