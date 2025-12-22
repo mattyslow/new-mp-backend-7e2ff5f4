@@ -331,19 +331,14 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
             </div>
 
             {/* Program List */}
-            <TabsContent value="program" className="flex-1 min-h-0 mt-4">
-              <div className="flex items-center justify-between mb-2">
+            <TabsContent value="program" className="flex-1 min-h-0 mt-4 space-y-3">
+              <div className="flex items-center justify-between">
                 <Label className="text-sm">
                   Programs{" "}
                   <span className="text-muted-foreground">
                     ({filteredPrograms.length}
                     {programs && filteredPrograms.length !== programs.length && ` of ${programs.length}`})
                   </span>
-                  {selectedProgramIds.size > 0 && (
-                    <Badge variant="secondary" className="ml-2">
-                      {selectedProgramIds.size} selected
-                    </Badge>
-                  )}
                 </Label>
                 <div className="flex gap-1">
                   {filteredPrograms.length > 0 && (
@@ -370,7 +365,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                   )}
                 </div>
               </div>
-              <ScrollArea className="h-[200px] border rounded-md">
+              <ScrollArea className={cn("border rounded-md", selectedProgramIds.size > 0 ? "h-[160px]" : "h-[200px]")}>
                 <div className="p-2 space-y-1">
                   {filteredPrograms.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">
@@ -388,6 +383,54 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                   )}
                 </div>
               </ScrollArea>
+
+              {/* Selected Programs View - Inside TabsContent */}
+              {selectedProgramIds.size > 0 && (
+                <div className="space-y-2 border rounded-md p-3 bg-muted/30">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">
+                      Selected ({selectedProgramIds.size})
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs px-2"
+                      onClick={clearProgramSelection}
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Clear
+                    </Button>
+                  </div>
+                  <ScrollArea className="max-h-[72px]">
+                    <div className="flex flex-wrap gap-1.5">
+                      {Array.from(selectedProgramIds).map((id) => {
+                        const program = programs?.find((p) => p.id === id);
+                        if (!program) return null;
+                        return (
+                          <Badge
+                            key={id}
+                            variant="secondary"
+                            className="flex items-center gap-1 py-0.5 px-2 text-xs"
+                          >
+                            <span className="max-w-[120px] truncate">{program.name}</span>
+                            <span className="text-muted-foreground">
+                              {format(parseISO(program.date), "M/d")}
+                            </span>
+                            <button
+                              type="button"
+                              className="ml-0.5 hover:text-destructive"
+                              onClick={() => toggleProgramSelection(id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
             </TabsContent>
 
             {/* Package List */}
@@ -421,52 +464,6 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
               </ScrollArea>
             </TabsContent>
           </Tabs>
-
-          {/* Selected Programs View */}
-          {activeTab === "program" && selectedProgramIds.size > 0 && (
-            <div className="space-y-2 border-t pt-3">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">
-                  Selected Programs ({selectedProgramIds.size})
-                </Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={clearProgramSelection}
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Clear All
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {Array.from(selectedProgramIds).map((id) => {
-                  const program = programs?.find((p) => p.id === id);
-                  if (!program) return null;
-                  return (
-                    <Badge
-                      key={id}
-                      variant="outline"
-                      className="flex items-center gap-1.5 py-1 px-2 bg-background"
-                    >
-                      <span className="text-sm font-medium max-w-[180px] truncate">{program.name}</span>
-                      <span className="text-muted-foreground text-xs">
-                        {format(parseISO(program.date), "MMM d")}
-                      </span>
-                      <button
-                        type="button"
-                        className="ml-1 hover:text-destructive"
-                        onClick={() => toggleProgramSelection(id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2 border-t">
