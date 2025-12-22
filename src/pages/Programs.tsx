@@ -9,6 +9,7 @@ import { usePrograms, useDeleteProgram, Program } from "@/hooks/usePrograms";
 import { usePackages, useDeletePackage, Package } from "@/hooks/usePackages";
 import { ProgramDialog } from "@/components/dialogs/ProgramDialog";
 import { PackageDialog } from "@/components/dialogs/PackageDialog";
+import { PackageProgramsDialog } from "@/components/dialogs/PackageProgramsDialog";
 import { format } from "date-fns";
 import {
   AlertDialog,
@@ -39,6 +40,7 @@ export default function Programs() {
   const [packageDialogOpen, setPackageDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
   const [deletePackageId, setDeletePackageId] = useState<string | null>(null);
+  const [viewingPackage, setViewingPackage] = useState<Package | null>(null);
 
   const programColumns = [
     { key: "name", label: "Name" },
@@ -193,6 +195,7 @@ export default function Programs() {
           columns={packageColumns}
           searchKey="name"
           emptyMessage="No packages found. Create your first package to get started."
+          onRowClick={(pkg) => setViewingPackage(pkg)}
         />
       )}
 
@@ -214,6 +217,13 @@ export default function Programs() {
           if (!open) setEditingPackage(null);
         }}
         pkg={editingPackage}
+      />
+
+      {/* Package Programs Dialog */}
+      <PackageProgramsDialog
+        open={!!viewingPackage}
+        onOpenChange={(open) => !open && setViewingPackage(null)}
+        pkg={viewingPackage}
       />
 
       {/* Delete Program Confirmation */}
