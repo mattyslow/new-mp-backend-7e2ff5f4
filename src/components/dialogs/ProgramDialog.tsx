@@ -467,30 +467,6 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Individual Day Price</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={packageData.individualDayPrice}
-                    onChange={(e) => setPackageData({ ...packageData, individualDayPrice: parseFloat(e.target.value) || 0 })}
-                    placeholder="Single session price"
-                  />
-                </div>
-                <div>
-                  <Label>Max Registrations</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={packageData.maxRegistrations}
-                    onChange={(e) => setPackageData({ ...packageData, maxRegistrations: parseInt(e.target.value) || 0 })}
-                    required
-                  />
-                </div>
-              </div>
-
               {/* Package Pricing Mode */}
               <div className="space-y-3">
                 <RadioGroup
@@ -508,31 +484,55 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                   </div>
                 </RadioGroup>
 
-                {pricingMode === "perDay" ? (
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Package Per-Day Price</Label>
+                    <Label>Individual Day Price</Label>
                     <Input
                       type="number"
                       step="0.01"
                       min="0"
-                      value={packageData.packagePerDayPrice}
-                      onChange={(e) => setPackageData({ ...packageData, packagePerDayPrice: parseFloat(e.target.value) || 0 })}
-                      placeholder="Discounted rate per day"
+                      value={packageData.individualDayPrice}
+                      onChange={(e) => setPackageData({ ...packageData, individualDayPrice: parseFloat(e.target.value) || 0 })}
+                      placeholder="Single session price"
                     />
                   </div>
-                ) : (
-                  <div>
-                    <Label>Package Price Override</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={packageData.packagePriceOverride}
-                      onChange={(e) => setPackageData({ ...packageData, packagePriceOverride: e.target.value })}
-                      placeholder="Fixed package price"
-                    />
-                  </div>
-                )}
+                  {pricingMode === "perDay" ? (
+                    <div>
+                      <Label>Package Per-Day Price</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={packageData.packagePerDayPrice}
+                        onChange={(e) => setPackageData({ ...packageData, packagePerDayPrice: parseFloat(e.target.value) || 0 })}
+                        placeholder="Discounted rate per day"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <Label>Package Price Override</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={packageData.packagePriceOverride}
+                        onChange={(e) => setPackageData({ ...packageData, packagePriceOverride: e.target.value })}
+                        placeholder="Fixed package price"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Label>Max Registrations</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={packageData.maxRegistrations}
+                    onChange={(e) => setPackageData({ ...packageData, maxRegistrations: parseInt(e.target.value) || 0 })}
+                    required
+                  />
+                </div>
               </div>
 
               {/* Price Preview - Subtle styling */}
