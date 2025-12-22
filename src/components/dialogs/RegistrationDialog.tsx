@@ -422,6 +422,56 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
             </TabsContent>
           </Tabs>
 
+          {/* Selected Programs View */}
+          {activeTab === "program" && selectedProgramIds.size > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">
+                  Selected Programs ({selectedProgramIds.size})
+                </Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={clearProgramSelection}
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear All
+                </Button>
+              </div>
+              <ScrollArea className="max-h-[120px] border rounded-md bg-muted/30">
+                <div className="p-2 flex flex-wrap gap-1.5">
+                  {Array.from(selectedProgramIds).map((id) => {
+                    const program = programs?.find((p) => p.id === id);
+                    if (!program) return null;
+                    return (
+                      <Badge
+                        key={id}
+                        variant="secondary"
+                        className="flex items-center gap-1 pr-1"
+                      >
+                        <span className="max-w-[150px] truncate">{program.name}</span>
+                        <span className="text-muted-foreground text-xs">
+                          {format(parseISO(program.date), "MMM d")}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0 hover:bg-transparent"
+                          onClick={() => toggleProgramSelection(id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-2 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
