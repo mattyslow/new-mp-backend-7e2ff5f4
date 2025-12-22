@@ -1,16 +1,33 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCreateRegistration } from "@/hooks/useRegistrations";
 import { usePlayers } from "@/hooks/usePlayers";
-import { usePrograms } from "@/hooks/usePrograms";
-import { usePackages } from "@/hooks/usePackages";
+import { usePrograms, Program } from "@/hooks/usePrograms";
+import { usePackages, Package } from "@/hooks/usePackages";
+import { useReferenceData } from "@/hooks/useReferenceData";
+import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
+import { CalendarIcon, X, MapPin, Clock, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface RegistrationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+interface Filters {
+  dateFrom: Date | null;
+  dateTo: Date | null;
+  locationId: string | null;
+  levelId: string | null;
+  categoryId: string | null;
 }
 
 export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogProps) {
@@ -18,24 +35,435 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
   const { data: players } = usePlayers();
   const { data: programs } = usePrograms();
   const { data: packages } = usePackages();
-  const [formData, setFormData] = useState({ player_id: "", program_id: null as string | null, package_id: null as string | null });
+  const { data: locations } = useReferenceData("locations");
+  const { data: levels } = useReferenceData("levels");
+  const { data: categories } = useReferenceData("categories");
+
+  const [playerId, setPlayerId] = useState("");
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"program" | "package">("program");
+  const [filters, setFilters] = useState<Filters>({
+    dateFrom: null,
+    dateTo: null,
+    locationId: null,
+    levelId: null,
+    categoryId: null,
+  });
+
+  const clearFilters = () => {
+    setFilters({
+      dateFrom: null,
+      dateTo: null,
+      locationId: null,
+      levelId: null,
+      categoryId: null,
+    });
+  };
+
+  const hasActiveFilters = Object.values(filters).some((v) => v !== null);
+
+  const filteredPrograms = useMemo(() => {
+    if (!programs) return [];
+    return programs.filter((p) => {
+      const programDate = startOfDay(parseISO(p.date));
+      if (filters.dateFrom && isBefore(programDate, startOfDay(filters.dateFrom))) return false;
+      if (filters.dateTo && isAfter(programDate, startOfDay(filters.dateTo))) return false;
+      if (filters.locationId && p.location_id !== filters.locationId) return false;
+      if (filters.levelId && p.level_id !== filters.levelId) return false;
+      if (filters.categoryId && p.category_id !== filters.categoryId) return false;
+      return true;
+    }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [programs, filters]);
+
+  const filteredPackages = useMemo(() => {
+    if (!packages) return [];
+    return packages.filter((p) => {
+      if (filters.locationId && p.location_id !== filters.locationId) return false;
+      return true;
+    });
+  }, [packages, filters.locationId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createRegistration.mutate(formData, { onSuccess: () => { onOpenChange(false); setFormData({ player_id: "", program_id: null, package_id: null }); } });
+    const registration = {
+      player_id: playerId,
+      program_id: activeTab === "program" ? selectedProgramId : null,
+      package_id: activeTab === "package" ? selectedPackageId : null,
+    };
+    createRegistration.mutate(registration, {
+      onSuccess: () => {
+        onOpenChange(false);
+        resetForm();
+      },
+    });
   };
+
+  const resetForm = () => {
+    setPlayerId("");
+    setSelectedProgramId(null);
+    setSelectedPackageId(null);
+    setActiveTab("program");
+    clearFilters();
+  };
+
+  const canSubmit =
+    playerId &&
+    ((activeTab === "program" && selectedProgramId) ||
+      (activeTab === "package" && selectedPackageId));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add Registration</DialogTitle></DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div><Label>Player</Label><Select value={formData.player_id} onValueChange={(v) => setFormData({ ...formData, player_id: v })}><SelectTrigger><SelectValue placeholder="Select player" /></SelectTrigger><SelectContent>{players?.map((p) => <SelectItem key={p.id} value={p.id}>{p.last_name}, {p.first_name}</SelectItem>)}</SelectContent></Select></div>
-          <div><Label>Program (optional)</Label><Select value={formData.program_id ?? ""} onValueChange={(v) => setFormData({ ...formData, program_id: v || null })}><SelectTrigger><SelectValue placeholder="Select program" /></SelectTrigger><SelectContent>{programs?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
-          <div><Label>Package (optional)</Label><Select value={formData.package_id ?? ""} onValueChange={(v) => setFormData({ ...formData, package_id: v || null })}><SelectTrigger><SelectValue placeholder="Select package" /></SelectTrigger><SelectContent>{packages?.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent></Select></div>
-          <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button type="submit" disabled={!formData.player_id}>Save</Button></div>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Add Registration</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 flex-1 min-h-0">
+          {/* Player Selection */}
+          <div className="space-y-2">
+            <Label>Player</Label>
+            <Select value={playerId} onValueChange={setPlayerId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select player..." />
+              </SelectTrigger>
+              <SelectContent>
+                {players?.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.last_name}, {p.first_name}
+                    {p.email && <span className="text-muted-foreground ml-2">({p.email})</span>}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Tabs for Program vs Package */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "program" | "package")} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="program">Program</TabsTrigger>
+              <TabsTrigger value="package">Package</TabsTrigger>
+            </TabsList>
+
+            {/* Filters */}
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Filters</Label>
+                {hasActiveFilters && (
+                  <Button type="button" variant="ghost" size="sm" onClick={clearFilters} className="h-7 text-xs">
+                    <X className="h-3 w-3 mr-1" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+
+              {/* Date Range Filters - only for programs */}
+              {activeTab === "program" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">From</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal h-9",
+                            !filters.dateFrom && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {filters.dateFrom ? format(filters.dateFrom, "MMM d, yyyy") : "Any date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filters.dateFrom ?? undefined}
+                          onSelect={(date) => setFilters({ ...filters, dateFrom: date ?? null })}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">To</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal h-9",
+                            !filters.dateTo && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {filters.dateTo ? format(filters.dateTo, "MMM d, yyyy") : "Any date"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={filters.dateTo ?? undefined}
+                          onSelect={(date) => setFilters({ ...filters, dateTo: date ?? null })}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              )}
+
+              {/* Dropdown Filters */}
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Location</Label>
+                  <Select
+                    value={filters.locationId ?? "all"}
+                    onValueChange={(v) => setFilters({ ...filters, locationId: v === "all" ? null : v })}
+                  >
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Locations</SelectItem>
+                      {locations?.map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {activeTab === "program" && (
+                  <>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Level</Label>
+                      <Select
+                        value={filters.levelId ?? "all"}
+                        onValueChange={(v) => setFilters({ ...filters, levelId: v === "all" ? null : v })}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="All" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Levels</SelectItem>
+                          {levels?.map((level) => (
+                            <SelectItem key={level.id} value={level.id}>
+                              {level.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Category</Label>
+                      <Select
+                        value={filters.categoryId ?? "all"}
+                        onValueChange={(v) => setFilters({ ...filters, categoryId: v === "all" ? null : v })}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="All" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Categories</SelectItem>
+                          {categories?.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Program List */}
+            <TabsContent value="program" className="flex-1 min-h-0 mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm">
+                  Programs{" "}
+                  <span className="text-muted-foreground">
+                    ({filteredPrograms.length}
+                    {programs && filteredPrograms.length !== programs.length && ` of ${programs.length}`})
+                  </span>
+                </Label>
+              </div>
+              <ScrollArea className="h-[200px] border rounded-md">
+                <div className="p-2 space-y-1">
+                  {filteredPrograms.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No programs match your filters
+                    </p>
+                  ) : (
+                    filteredPrograms.map((program) => (
+                      <ProgramItem
+                        key={program.id}
+                        program={program}
+                        selected={selectedProgramId === program.id}
+                        onSelect={() => setSelectedProgramId(program.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Package List */}
+            <TabsContent value="package" className="flex-1 min-h-0 mt-4">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm">
+                  Packages{" "}
+                  <span className="text-muted-foreground">
+                    ({filteredPackages.length}
+                    {packages && filteredPackages.length !== packages.length && ` of ${packages.length}`})
+                  </span>
+                </Label>
+              </div>
+              <ScrollArea className="h-[200px] border rounded-md">
+                <div className="p-2 space-y-1">
+                  {filteredPackages.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No packages match your filters
+                    </p>
+                  ) : (
+                    filteredPackages.map((pkg) => (
+                      <PackageItem
+                        key={pkg.id}
+                        pkg={pkg}
+                        selected={selectedPackageId === pkg.id}
+                        onSelect={() => setSelectedPackageId(pkg.id)}
+                      />
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-2 border-t">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!canSubmit || createRegistration.isPending}>
+              {createRegistration.isPending ? "Saving..." : "Register"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface ProgramItemProps {
+  program: Program;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function ProgramItem({ program, selected, onSelect }: ProgramItemProps) {
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(":");
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? "PM" : "AM";
+    const hour12 = h % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "w-full text-left p-3 rounded-md border transition-colors",
+        selected
+          ? "border-primary bg-primary/5"
+          : "border-transparent hover:bg-muted/50"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm truncate">{program.name}</div>
+          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <CalendarIcon className="h-3 w-3" />
+              {format(parseISO(program.date), "EEE, MMM d, yyyy")}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {formatTime(program.start_time)} - {formatTime(program.end_time)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            {program.levels?.name && (
+              <Badge variant="secondary" className="text-xs h-5">
+                {program.levels.name}
+              </Badge>
+            )}
+            {program.locations?.name && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {program.locations.name}
+              </span>
+            )}
+            {program.categories?.name && (
+              <span className="text-xs text-muted-foreground">
+                {program.categories.name}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="font-semibold text-sm">${program.price}</div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+            <Users className="h-3 w-3" />
+            {program.max_registrations} max
+          </div>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+interface PackageItemProps {
+  pkg: Package;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function PackageItem({ pkg, selected, onSelect }: PackageItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "w-full text-left p-3 rounded-md border transition-colors",
+        selected
+          ? "border-primary bg-primary/5"
+          : "border-transparent hover:bg-muted/50"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="font-medium text-sm truncate">{pkg.name}</div>
+          {pkg.locations?.name && (
+            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3" />
+              {pkg.locations.name}
+            </div>
+          )}
+        </div>
+        <div className="text-right shrink-0">
+          <div className="font-semibold text-sm">${pkg.price}</div>
+        </div>
+      </div>
+    </button>
   );
 }
