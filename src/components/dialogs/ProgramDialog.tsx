@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown } from "lucide-react";
 import { useCreateProgram, useUpdateProgram, useCreateProgramsWithPackages, Program } from "@/hooks/usePrograms";
@@ -55,6 +56,9 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
   // Name overrides for editable previews
   const [programNameOverrides, setProgramNameOverrides] = useState<Record<number, string>>({});
   const [packageNameOverrides, setPackageNameOverrides] = useState<Record<number, string>>({});
+  
+  // Package pricing mode
+  const [pricingMode, setPricingMode] = useState<"perDay" | "override">("perDay");
 
   useEffect(() => {
     if (program) {
@@ -476,31 +480,6 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                   />
                 </div>
                 <div>
-                  <Label>Package Per-Day Price</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={packageData.packagePerDayPrice}
-                    onChange={(e) => setPackageData({ ...packageData, packagePerDayPrice: parseFloat(e.target.value) || 0 })}
-                    placeholder="Discounted rate"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Package Price Override</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={packageData.packagePriceOverride}
-                    onChange={(e) => setPackageData({ ...packageData, packagePriceOverride: e.target.value })}
-                    placeholder="Optional"
-                  />
-                </div>
-                <div>
                   <Label>Max Registrations</Label>
                   <Input
                     type="number"
@@ -510,6 +489,50 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                     required
                   />
                 </div>
+              </div>
+
+              {/* Package Pricing Mode */}
+              <div className="space-y-3">
+                <RadioGroup
+                  value={pricingMode}
+                  onValueChange={(v) => setPricingMode(v as "perDay" | "override")}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="perDay" id="perDay" />
+                    <Label htmlFor="perDay" className="cursor-pointer">Per-Day Price</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="override" id="override" />
+                    <Label htmlFor="override" className="cursor-pointer">Override Price</Label>
+                  </div>
+                </RadioGroup>
+
+                {pricingMode === "perDay" ? (
+                  <div>
+                    <Label>Package Per-Day Price</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={packageData.packagePerDayPrice}
+                      onChange={(e) => setPackageData({ ...packageData, packagePerDayPrice: parseFloat(e.target.value) || 0 })}
+                      placeholder="Discounted rate per day"
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label>Package Price Override</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={packageData.packagePriceOverride}
+                      onChange={(e) => setPackageData({ ...packageData, packagePriceOverride: e.target.value })}
+                      placeholder="Fixed package price"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Price Preview - Subtle styling */}
