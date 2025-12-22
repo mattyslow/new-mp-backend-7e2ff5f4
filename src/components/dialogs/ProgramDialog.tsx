@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { useCreateProgram, useUpdateProgram, useCreateProgramsWithPackages, Program } from "@/hooks/usePrograms";
 import { useReferenceData } from "@/hooks/useReferenceData";
-import { format } from "date-fns";
+import { formatProgramName, formatPackageName, generateProgramDates, splitWeeksIntoPackages } from "@/lib/programUtils";
+import { addWeeks } from "date-fns";
 
 interface ProgramDialogProps {
   open: boolean;
@@ -50,6 +50,10 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
     maxRegistrations: 0,
   });
 
+  // Name overrides for editable previews
+  const [programNameOverrides, setProgramNameOverrides] = useState<Record<number, string>>({});
+  const [packageNameOverrides, setPackageNameOverrides] = useState<Record<number, string>>({});
+
   useEffect(() => {
     if (program) {
       setFormData({
@@ -86,6 +90,8 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
         packagePriceOverride: "",
         maxRegistrations: 0,
       });
+      setProgramNameOverrides({});
+      setPackageNameOverrides({});
       setCreatePackage(false);
     }
   }, [program, open]);
@@ -94,6 +100,75 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
   // Get selected level and category names for naming
   const selectedLevel = levels?.find((l) => l.id === formData.level_id);
   const selectedCategory = categories?.find((c) => c.id === formData.category_id);
+
+  // Generate single program name preview
+  const singleProgramNamePreview = useMemo(() => {
+    if (!formData.date || !formData.start_time || !formData.end_time) return "";
+    return formatProgramName(
+      new Date(formData.date),
+      formData.start_time,
+      formData.end_time,
+      selectedLevel?.name
+    );
+  }, [formData.date, formData.start_time, formData.end_time, selectedLevel?.name]);
+
+  // Generate package and program name previews
+  const packagePreviewData = useMemo(() => {
+    if (!createPackage || !formData.date || !formData.start_time || !formData.end_time) return null;
+    if (packageData.numberOfWeeks <= 0 || packageData.numberOfPackages <= 0) return null;
+
+    const startDate = new Date(formData.date);
+    const programDates = generateProgramDates(startDate, packageData.numberOfWeeks);
+    const packageSplits = splitWeeksIntoPackages(packageData.numberOfWeeks, packageData.numberOfPackages);
+
+    const packages = packageSplits.map((split, idx) => {
+      const pkgStartDate = programDates[split.startWeekIndex];
+      const pkgEndDate = programDates[split.endWeekIndex];
+      const generatedName = formatPackageName(
+        pkgStartDate,
+        pkgEndDate,
+        split.weeksCount,
+        formData.start_time,
+        formData.end_time,
+        selectedLevel?.name,
+        selectedCategory?.name
+      );
+      return {
+        name: packageNameOverrides[idx] ?? generatedName,
+        generatedName,
+        weeks: split.weeksCount,
+        startWeekIndex: split.startWeekIndex,
+        endWeekIndex: split.endWeekIndex,
+      };
+    });
+
+    const programs = programDates.map((date, idx) => {
+      const generatedName = formatProgramName(
+        date,
+        formData.start_time,
+        formData.end_time,
+        selectedLevel?.name
+      );
+      return {
+        name: programNameOverrides[idx] ?? generatedName,
+        generatedName,
+        date,
+      };
+    });
+
+    return { packages, programs };
+  }, [
+    createPackage,
+    formData.date,
+    formData.start_time,
+    formData.end_time,
+    packageData.numberOfWeeks,
+    packageData.numberOfPackages,
+    selectedLevel?.name,
+    selectedCategory?.name,
+    programNameOverrides,
+    packageNameOverrides,
+  ]);
 
   // Calculate package price preview
   const getPackagePricePreview = () => {
@@ -143,6 +218,8 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
           seasonId: formData.season_id,
           levelName: selectedLevel?.name ?? null,
           categoryName: selectedCategory?.name ?? null,
+          programNameOverrides,
+          packageNameOverrides,
         },
         { onSuccess: () => onOpenChange(false) }
       );
@@ -265,10 +342,10 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
               <div>
                 <Label>Name</Label>
                 <Input
-                  value={formData.name}
+                  value={formData.name || singleProgramNamePreview}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required={!createPackage}
-                  placeholder="Program name"
+                  placeholder={singleProgramNamePreview || "Program name"}
                 />
               </div>
             )}
@@ -382,6 +459,37 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                   />
                 </div>
               </div>
+
+              {/* Name Previews - Editable */}
+              {packagePreviewData && (
+                <div className="space-y-3 pt-2">
+                  <Label className="text-sm font-medium">Package Names</Label>
+                  <div className="space-y-2">
+                    {packagePreviewData.packages.map((pkg, idx) => (
+                      <Input
+                        key={`pkg-${idx}`}
+                        value={pkg.name}
+                        onChange={(e) => setPackageNameOverrides({ ...packageNameOverrides, [idx]: e.target.value })}
+                        placeholder={pkg.generatedName}
+                        className="text-sm"
+                      />
+                    ))}
+                  </div>
+
+                  <Label className="text-sm font-medium">Program Names</Label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {packagePreviewData.programs.map((prog, idx) => (
+                      <Input
+                        key={`prog-${idx}`}
+                        value={prog.name}
+                        onChange={(e) => setProgramNameOverrides({ ...programNameOverrides, [idx]: e.target.value })}
+                        placeholder={prog.generatedName}
+                        className="text-sm"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Price Preview - Subtle styling */}
               {pricePreview && pricePreview.length > 0 && (
