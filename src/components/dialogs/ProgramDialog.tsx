@@ -42,7 +42,6 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
   // Package creation fields
   const [createPackage, setCreatePackage] = useState(false);
   const [packageData, setPackageData] = useState({
-    startDate: "",
     numberOfWeeks: 1,
     numberOfPackages: 1,
     individualDayPrice: 0,
@@ -80,7 +79,6 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
         season_id: null,
       });
       setPackageData({
-        startDate: "",
         numberOfWeeks: 1,
         numberOfPackages: 1,
         individualDayPrice: 0,
@@ -92,12 +90,6 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
     }
   }, [program, open]);
 
-  // Sync start date with program date when creating package
-  useEffect(() => {
-    if (createPackage && formData.date && !packageData.startDate) {
-      setPackageData((prev) => ({ ...prev, startDate: formData.date }));
-    }
-  }, [createPackage, formData.date]);
 
   // Get selected level and category names for naming
   const selectedLevel = levels?.find((l) => l.id === formData.level_id);
@@ -132,8 +124,8 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
       // Update existing program
       updateProgram.mutate({ id: program.id, ...formData }, { onSuccess: () => onOpenChange(false) });
     } else if (createPackage) {
-      // Create packages with programs
-      const startDate = new Date(packageData.startDate);
+      // Create packages with programs - use formData.date as start date
+      const startDate = new Date(formData.date);
       createProgramsWithPackages.mutate(
         {
           startDate,
@@ -257,9 +249,19 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
             </div>
           </div>
 
-          {/* Single Program Fields - Only show when NOT creating package */}
-          {(!createPackage || program) && (
-            <>
+          {/* Date field - Always show (used as start date for packages) */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>{createPackage ? "Start Date" : "Date"}</Label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                required
+              />
+            </div>
+            {/* Name field - Only show when NOT creating package */}
+            {(!createPackage || program) && (
               <div>
                 <Label>Name</Label>
                 <Input
@@ -269,35 +271,30 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                   placeholder="Program name"
                 />
               </div>
+            )}
+          </div>
+
+          {/* Single Program Fields - Only show when NOT creating package */}
+          {(!createPackage || program) && (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Date</Label>
+                <Label>Price</Label>
                 <Input
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  required={!createPackage}
+                  type="number"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Price</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label>Max Registrations</Label>
-                  <Input
-                    type="number"
-                    value={formData.max_registrations}
-                    onChange={(e) => setFormData({ ...formData, max_registrations: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
+              <div>
+                <Label>Max Registrations</Label>
+                <Input
+                  type="number"
+                  value={formData.max_registrations}
+                  onChange={(e) => setFormData({ ...formData, max_registrations: parseInt(e.target.value) || 0 })}
+                />
               </div>
-            </>
+            </div>
           )}
 
           {/* Create Package Toggle - Only show when adding new program */}
@@ -313,16 +310,7 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
           {/* Package Fields - Show seamlessly when creating package */}
           {createPackage && !program && (
             <>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={packageData.startDate}
-                    onChange={(e) => setPackageData({ ...packageData, startDate: e.target.value })}
-                    required
-                  />
-                </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Number of Weeks</Label>
                   <Input
