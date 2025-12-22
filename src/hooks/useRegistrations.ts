@@ -54,6 +54,27 @@ export function useCreateRegistration() {
   });
 }
 
+export function useBatchCreateRegistrations() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (registrations: Omit<Registration, "id" | "created_at" | "players" | "programs" | "packages">[]) => {
+      const { data, error } = await supabase
+        .from("registrations")
+        .insert(registrations)
+        .select();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["registrations"] });
+      toast.success(`${data.length} registration${data.length > 1 ? 's' : ''} created successfully`);
+    },
+    onError: (error) => {
+      toast.error("Failed to create registrations: " + error.message);
+    },
+  });
+}
+
 export function useDeleteRegistration() {
   const queryClient = useQueryClient();
   return useMutation({
