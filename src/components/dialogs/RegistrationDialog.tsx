@@ -8,13 +8,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useCreateRegistration } from "@/hooks/useRegistrations";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useCreateRegistration, useBatchCreateRegistrations } from "@/hooks/useRegistrations";
 import { usePlayers } from "@/hooks/usePlayers";
 import { usePrograms, Program } from "@/hooks/usePrograms";
 import { usePackages, Package } from "@/hooks/usePackages";
 import { useReferenceData } from "@/hooks/useReferenceData";
 import { format, parseISO, isAfter, isBefore, startOfDay } from "date-fns";
-import { CalendarIcon, X, MapPin, Clock, Users } from "lucide-react";
+import { CalendarIcon, X, MapPin, Clock, Users, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface RegistrationDialogProps {
@@ -32,6 +33,7 @@ interface Filters {
 
 export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogProps) {
   const createRegistration = useCreateRegistration();
+  const batchCreateRegistrations = useBatchCreateRegistrations();
   const { data: players } = usePlayers();
   const { data: programs } = usePrograms();
   const { data: packages } = usePackages();
@@ -40,7 +42,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
   const { data: categories } = useReferenceData("categories");
 
   const [playerId, setPlayerId] = useState("");
-  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
+  const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set());
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"program" | "package">("program");
   const [filters, setFilters] = useState<Filters>({
@@ -92,32 +94,68 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
     });
   }, [packages, filters.locationId]);
 
+  const toggleProgramSelection = (programId: string) => {
+    setSelectedProgramIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(programId)) {
+        newSet.delete(programId);
+      } else {
+        newSet.add(programId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAllFilteredPrograms = () => {
+    setSelectedProgramIds(new Set(filteredPrograms.map((p) => p.id)));
+  };
+
+  const clearProgramSelection = () => {
+    setSelectedProgramIds(new Set());
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const registration = {
-      player_id: playerId,
-      program_id: activeTab === "program" ? selectedProgramId : null,
-      package_id: activeTab === "package" ? selectedPackageId : null,
-    };
-    createRegistration.mutate(registration, {
-      onSuccess: () => {
-        onOpenChange(false);
-        resetForm();
-      },
-    });
+    
+    if (activeTab === "program" && selectedProgramIds.size > 0) {
+      const registrations = Array.from(selectedProgramIds).map((programId) => ({
+        player_id: playerId,
+        program_id: programId,
+        package_id: null,
+      }));
+      batchCreateRegistrations.mutate(registrations, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    } else if (activeTab === "package" && selectedPackageId) {
+      createRegistration.mutate({
+        player_id: playerId,
+        program_id: null,
+        package_id: selectedPackageId,
+      }, {
+        onSuccess: () => {
+          onOpenChange(false);
+          resetForm();
+        },
+      });
+    }
   };
 
   const resetForm = () => {
     setPlayerId("");
-    setSelectedProgramId(null);
+    setSelectedProgramIds(new Set());
     setSelectedPackageId(null);
     setActiveTab("program");
     clearFilters();
   };
 
+  const isPending = createRegistration.isPending || batchCreateRegistrations.isPending;
+  
   const canSubmit =
     playerId &&
-    ((activeTab === "program" && selectedProgramId) ||
+    ((activeTab === "program" && selectedProgramIds.size > 0) ||
       (activeTab === "package" && selectedPackageId));
 
   return (
@@ -301,7 +339,36 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                     ({filteredPrograms.length}
                     {programs && filteredPrograms.length !== programs.length && ` of ${programs.length}`})
                   </span>
+                  {selectedProgramIds.size > 0 && (
+                    <Badge variant="secondary" className="ml-2">
+                      {selectedProgramIds.size} selected
+                    </Badge>
+                  )}
                 </Label>
+                <div className="flex gap-1">
+                  {filteredPrograms.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={selectAllFilteredPrograms}
+                    >
+                      Select All
+                    </Button>
+                  )}
+                  {selectedProgramIds.size > 0 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={clearProgramSelection}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
               </div>
               <ScrollArea className="h-[200px] border rounded-md">
                 <div className="p-2 space-y-1">
@@ -314,8 +381,8 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                       <ProgramItem
                         key={program.id}
                         program={program}
-                        selected={selectedProgramId === program.id}
-                        onSelect={() => setSelectedProgramId(program.id)}
+                        selected={selectedProgramIds.has(program.id)}
+                        onToggle={() => toggleProgramSelection(program.id)}
                       />
                     ))
                   )}
@@ -360,8 +427,10 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!canSubmit || createRegistration.isPending}>
-              {createRegistration.isPending ? "Saving..." : "Register"}
+            <Button type="submit" disabled={!canSubmit || isPending}>
+              {isPending ? "Saving..." : activeTab === "program" && selectedProgramIds.size > 1 
+                ? `Register (${selectedProgramIds.size})` 
+                : "Register"}
             </Button>
           </div>
         </form>
@@ -373,10 +442,10 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
 interface ProgramItemProps {
   program: Program;
   selected: boolean;
-  onSelect: () => void;
+  onToggle: () => void;
 }
 
-function ProgramItem({ program, selected, onSelect }: ProgramItemProps) {
+function ProgramItem({ program, selected, onToggle }: ProgramItemProps) {
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(":");
     const h = parseInt(hours);
@@ -388,7 +457,7 @@ function ProgramItem({ program, selected, onSelect }: ProgramItemProps) {
   return (
     <button
       type="button"
-      onClick={onSelect}
+      onClick={onToggle}
       className={cn(
         "w-full text-left p-3 rounded-md border transition-colors",
         selected
@@ -396,7 +465,10 @@ function ProgramItem({ program, selected, onSelect }: ProgramItemProps) {
           : "border-transparent hover:bg-muted/50"
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start gap-3">
+        <div className="pt-0.5">
+          <Checkbox checked={selected} className="pointer-events-none" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm truncate">{program.name}</div>
           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
