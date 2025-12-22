@@ -103,6 +103,12 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
   }, [program, open]);
 
 
+  // Parse YYYY-MM-DD string as local date (not UTC)
+  const parseLocalDate = (dateStr: string): Date => {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return new Date(year, month - 1, day); // month is 0-indexed
+  };
+
   // Get selected level and category names for naming
   const selectedLevel = levels?.find((l) => l.id === formData.level_id);
   const selectedCategory = categories?.find((c) => c.id === formData.category_id);
@@ -110,7 +116,7 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
   // Generate single program name preview
   const singleProgramNamePreview = useMemo(() => {
     if (!formData.date || !formData.start_time || !formData.end_time) return "";
-    const date = new Date(formData.date);
+    const date = parseLocalDate(formData.date);
     if (isNaN(date.getTime())) return "";
     return formatProgramName(
       date,
@@ -125,7 +131,7 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
     if (!createPackage || !formData.date || !formData.start_time || !formData.end_time) return null;
     if (packageData.numberOfWeeks <= 0 || packageData.numberOfPackages <= 0) return null;
 
-    const startDate = new Date(formData.date);
+    const startDate = parseLocalDate(formData.date);
     // Validate the date is actually valid
     if (isNaN(startDate.getTime())) return null;
     
