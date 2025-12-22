@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Users,
   Calendar,
-  Package,
   ClipboardList,
   Settings,
 } from "lucide-react";
@@ -23,7 +22,6 @@ const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Players", url: "/players", icon: Users },
   { title: "Programs", url: "/programs", icon: Calendar },
-  { title: "Packages", url: "/packages", icon: Package },
   { title: "Registrations", url: "/registrations", icon: ClipboardList },
 ];
 

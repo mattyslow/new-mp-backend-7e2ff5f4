@@ -2,11 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Players from "./pages/Players";
 import Programs from "./pages/Programs";
-import Packages from "./pages/Packages";
 import Registrations from "./pages/Registrations";
 import { LevelsSettings, CategoriesSettings, LocationsSettings, SeasonsSettings } from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -23,7 +22,7 @@ const App = () => (
           <Route path="/" element={<Dashboard />} />
           <Route path="/players" element={<Players />} />
           <Route path="/programs" element={<Programs />} />
-          <Route path="/packages" element={<Packages />} />
+          <Route path="/packages" element={<Navigate to="/programs" replace />} />
           <Route path="/registrations" element={<Registrations />} />
           <Route path="/settings/levels" element={<LevelsSettings />} />
           <Route path="/settings/categories" element={<CategoriesSettings />} />
