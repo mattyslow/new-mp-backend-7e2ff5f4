@@ -12,6 +12,7 @@ import { PackageDialog } from "@/components/dialogs/PackageDialog";
 import { PackageProgramsDialog } from "@/components/dialogs/PackageProgramsDialog";
 import { DeleteProgramDialog } from "@/components/dialogs/DeleteProgramDialog";
 import { DeletePackageDialog } from "@/components/dialogs/DeletePackageDialog";
+import { ProgramDetailsDialog } from "@/components/dialogs/ProgramDetailsDialog";
 import { format } from "date-fns";
 
 type ViewTab = "programs" | "packages";
@@ -24,6 +25,7 @@ export default function Programs() {
   const [programDialogOpen, setProgramDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
   const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
+  const [viewingProgram, setViewingProgram] = useState<Program | null>(null);
 
   // Packages state
   const { data: packages, isLoading: packagesLoading } = usePackages();
@@ -178,6 +180,7 @@ export default function Programs() {
           columns={programColumns}
           searchKey="name"
           emptyMessage="No programs found. Create your first program to get started."
+          onRowClick={(program) => setViewingProgram(program)}
         />
       ) : (
         <DataTable
@@ -207,6 +210,13 @@ export default function Programs() {
           if (!open) setEditingPackage(null);
         }}
         pkg={editingPackage}
+      />
+
+      {/* Program Details Dialog */}
+      <ProgramDetailsDialog
+        open={!!viewingProgram}
+        onOpenChange={(open) => !open && setViewingProgram(null)}
+        program={viewingProgram}
       />
 
       {/* Package Programs Dialog */}

@@ -111,3 +111,23 @@ export function usePlayerRegistrations(playerId: string) {
     enabled: !!playerId,
   });
 }
+
+export function useProgramRegistrations(programId: string) {
+  return useQuery({
+    queryKey: ["registrations", "program", programId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("registrations")
+        .select(`
+          *,
+          players(id, first_name, last_name, email),
+          packages(name)
+        `)
+        .eq("program_id", programId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!programId,
+  });
+}
