@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
@@ -7,15 +7,26 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2 } from "lucide-react";
 import { usePrograms, Program } from "@/hooks/usePrograms";
 import { usePackages, Package } from "@/hooks/usePackages";
+import { useReferenceData } from "@/hooks/useReferenceData";
 import { ProgramDialog } from "@/components/dialogs/ProgramDialog";
 import { PackageDialog } from "@/components/dialogs/PackageDialog";
 import { PackageProgramsDialog } from "@/components/dialogs/PackageProgramsDialog";
 import { DeleteProgramDialog } from "@/components/dialogs/DeleteProgramDialog";
 import { DeletePackageDialog } from "@/components/dialogs/DeletePackageDialog";
 import { ProgramDetailsDialog } from "@/components/dialogs/ProgramDetailsDialog";
-import { format } from "date-fns";
+import { TableFilters } from "@/components/TableFilters";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 
 type ViewTab = "programs" | "packages";
+
+interface ProgramFilters {
+  locationId: string | null;
+  categoryId: string | null;
+  levelId: string | null;
+  seasonId: string | null;
+  dateFrom: Date | null;
+  dateTo: Date | null;
+}
 
 export default function Programs() {
   const [activeTab, setActiveTab] = useState<ViewTab>("programs");
@@ -34,6 +45,57 @@ export default function Programs() {
   const [deletingPackage, setDeletingPackage] = useState<Package | null>(null);
   const [viewingPackage, setViewingPackage] = useState<Package | null>(null);
 
+  // Reference data for filters
+  const { data: locations } = useReferenceData("locations");
+  const { data: categories } = useReferenceData("categories");
+  const { data: levels } = useReferenceData("levels");
+  const { data: seasons } = useReferenceData("seasons");
+
+  // Filter state
+  const [filters, setFilters] = useState<ProgramFilters>({
+    locationId: null,
+    categoryId: null,
+    levelId: null,
+    seasonId: null,
+    dateFrom: null,
+    dateTo: null,
+  });
+
+  const handleFilterChange = (key: string, value: string | Date | null) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      locationId: null,
+      categoryId: null,
+      levelId: null,
+      seasonId: null,
+      dateFrom: null,
+      dateTo: null,
+    });
+  };
+
+  // Filtered programs
+  const filteredPrograms = useMemo(() => {
+    if (!programs) return [];
+    return programs.filter((program) => {
+      if (filters.locationId && program.location_id !== filters.locationId) return false;
+      if (filters.categoryId && program.category_id !== filters.categoryId) return false;
+      if (filters.levelId && program.level_id !== filters.levelId) return false;
+      if (filters.seasonId && program.season_id !== filters.seasonId) return false;
+      if (filters.dateFrom) {
+        const programDate = new Date(program.date);
+        if (isBefore(programDate, startOfDay(filters.dateFrom))) return false;
+      }
+      if (filters.dateTo) {
+        const programDate = new Date(program.date);
+        if (isAfter(programDate, endOfDay(filters.dateTo))) return false;
+      }
+      return true;
+    });
+  }, [programs, filters]);
+
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(":");
     const hour = parseInt(hours, 10);
@@ -41,6 +103,43 @@ export default function Programs() {
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
   };
+
+  const filterConfig = [
+    {
+      key: "locationId",
+      label: "Location",
+      type: "select" as const,
+      options: locations?.map((l) => ({ id: l.id, name: l.name })) || [],
+    },
+    {
+      key: "categoryId",
+      label: "Category",
+      type: "select" as const,
+      options: categories?.map((c) => ({ id: c.id, name: c.name })) || [],
+    },
+    {
+      key: "levelId",
+      label: "Level",
+      type: "select" as const,
+      options: levels?.map((l) => ({ id: l.id, name: l.name })) || [],
+    },
+    {
+      key: "seasonId",
+      label: "Season",
+      type: "select" as const,
+      options: seasons?.map((s) => ({ id: s.id, name: s.name })) || [],
+    },
+    {
+      key: "dateFrom",
+      label: "From Date",
+      type: "date" as const,
+    },
+    {
+      key: "dateTo",
+      label: "To Date",
+      type: "date" as const,
+    },
+  ];
 
   const programColumns = [
     { key: "name", label: "Name" },
@@ -173,18 +272,29 @@ export default function Programs() {
         }
       />
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ViewTab)} className="mb-6">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ViewTab)} className="mb-4">
         <TabsList>
           <TabsTrigger value="programs">Programs</TabsTrigger>
           <TabsTrigger value="packages">Packages</TabsTrigger>
         </TabsList>
       </Tabs>
 
+      {activeTab === "programs" && (
+        <div className="mb-4">
+          <TableFilters
+            filters={filterConfig}
+            values={filters as unknown as Record<string, string | Date | null>}
+            onChange={handleFilterChange}
+            onClear={clearFilters}
+          />
+        </div>
+      )}
+
       {isLoading ? (
         <p className="text-muted-foreground">Loading...</p>
       ) : activeTab === "programs" ? (
         <DataTable
-          data={programs ?? []}
+          data={filteredPrograms}
           columns={programColumns}
           searchKey="name"
           emptyMessage="No programs found. Create your first program to get started."

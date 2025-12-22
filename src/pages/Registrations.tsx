@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2 } from "lucide-react";
 import { useRegistrations, useDeleteRegistration, Registration } from "@/hooks/useRegistrations";
+import { usePrograms } from "@/hooks/usePrograms";
+import { usePackages } from "@/hooks/usePackages";
 import { RegistrationDialog } from "@/components/dialogs/RegistrationDialog";
-import { format } from "date-fns";
+import { TableFilters } from "@/components/TableFilters";
+import { format, isAfter, isBefore, startOfDay, endOfDay } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,11 +21,84 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+interface RegistrationFilters {
+  programId: string | null;
+  packageId: string | null;
+  dateFrom: Date | null;
+  dateTo: Date | null;
+}
+
 export default function Registrations() {
   const { data: registrations, isLoading } = useRegistrations();
+  const { data: programs } = usePrograms();
+  const { data: packages } = usePackages();
   const deleteRegistration = useDeleteRegistration();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Filter state
+  const [filters, setFilters] = useState<RegistrationFilters>({
+    programId: null,
+    packageId: null,
+    dateFrom: null,
+    dateTo: null,
+  });
+
+  const handleFilterChange = (key: string, value: string | Date | null) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      programId: null,
+      packageId: null,
+      dateFrom: null,
+      dateTo: null,
+    });
+  };
+
+  // Filtered registrations
+  const filteredRegistrations = useMemo(() => {
+    if (!registrations) return [];
+    return registrations.filter((reg) => {
+      if (filters.programId && reg.program_id !== filters.programId) return false;
+      if (filters.packageId && reg.package_id !== filters.packageId) return false;
+      if (filters.dateFrom) {
+        const regDate = new Date(reg.created_at);
+        if (isBefore(regDate, startOfDay(filters.dateFrom))) return false;
+      }
+      if (filters.dateTo) {
+        const regDate = new Date(reg.created_at);
+        if (isAfter(regDate, endOfDay(filters.dateTo))) return false;
+      }
+      return true;
+    });
+  }, [registrations, filters]);
+
+  const filterConfig = [
+    {
+      key: "programId",
+      label: "Program",
+      type: "select" as const,
+      options: programs?.map((p) => ({ id: p.id, name: p.name })) || [],
+    },
+    {
+      key: "packageId",
+      label: "Package",
+      type: "select" as const,
+      options: packages?.map((p) => ({ id: p.id, name: p.name })) || [],
+    },
+    {
+      key: "dateFrom",
+      label: "From Date",
+      type: "date" as const,
+    },
+    {
+      key: "dateTo",
+      label: "To Date",
+      type: "date" as const,
+    },
+  ];
 
   const columns = [
     {
@@ -79,11 +155,20 @@ export default function Registrations() {
         }
       />
 
+      <div className="mb-4">
+        <TableFilters
+          filters={filterConfig}
+          values={filters as unknown as Record<string, string | Date | null>}
+          onChange={handleFilterChange}
+          onClear={clearFilters}
+        />
+      </div>
+
       {isLoading ? (
         <p className="text-muted-foreground">Loading...</p>
       ) : (
         <DataTable
-          data={registrations ?? []}
+          data={filteredRegistrations}
           columns={columns}
           emptyMessage="No registrations found. Create your first registration to get started."
         />
