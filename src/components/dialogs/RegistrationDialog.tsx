@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { useCreateRegistration, useBatchCreateRegistrations } from "@/hooks/useRegistrations";
 import { usePlayers } from "@/hooks/usePlayers";
 import { usePrograms, Program } from "@/hooks/usePrograms";
@@ -466,8 +466,11 @@ function ProgramItem({ program, selected, onToggle }: ProgramItemProps) {
       )}
     >
       <div className="flex items-start gap-3">
-        <div className="pt-0.5">
-          <Checkbox checked={selected} className="pointer-events-none" />
+        <div className={cn(
+          "mt-0.5 h-4 w-4 rounded border flex items-center justify-center shrink-0",
+          selected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/50"
+        )}>
+          {selected && <Check className="h-3 w-3" />}
         </div>
         <div className="flex-1 min-w-0">
           <div className="font-medium text-sm truncate">{program.name}</div>
