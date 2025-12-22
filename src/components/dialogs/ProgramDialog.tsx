@@ -518,7 +518,7 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                       </div>
                       <div className="flex items-center space-x-1">
                         <RadioGroupItem value="override" id="override" />
-                        <Label htmlFor="override" className="cursor-pointer text-xs">Override</Label>
+                        <Label htmlFor="override" className="cursor-pointer text-xs">Fixed Price</Label>
                       </div>
                     </RadioGroup>
                   </div>
