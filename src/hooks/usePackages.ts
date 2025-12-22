@@ -109,6 +109,51 @@ export function useDeletePackage() {
   });
 }
 
+export function useDeletePackageWithPrograms() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (packageId: string) => {
+      // First get all program IDs in this package
+      const { data: programLinks, error: fetchError } = await supabase
+        .from("programs_packages")
+        .select("program_id")
+        .eq("package_id", packageId);
+      
+      if (fetchError) throw fetchError;
+      
+      const programIds = programLinks?.map(link => link.program_id) ?? [];
+      
+      // Delete the package (this will cascade delete programs_packages entries)
+      const { error: packageError } = await supabase
+        .from("packages")
+        .delete()
+        .eq("id", packageId);
+      
+      if (packageError) throw packageError;
+      
+      // Delete all programs that were in this package
+      if (programIds.length > 0) {
+        const { error: programsError } = await supabase
+          .from("programs")
+          .delete()
+          .in("id", programIds);
+        
+        if (programsError) throw programsError;
+      }
+      
+      return { deletedProgramCount: programIds.length };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+      queryClient.invalidateQueries({ queryKey: ["programs"] });
+      toast.success(`Package and ${result.deletedProgramCount} programs deleted successfully`);
+    },
+    onError: (error) => {
+      toast.error("Failed to delete package and programs: " + error.message);
+    },
+  });
+}
+
 export function usePackagePrograms(packageId: string) {
   return useQuery({
     queryKey: ["package-programs", packageId],

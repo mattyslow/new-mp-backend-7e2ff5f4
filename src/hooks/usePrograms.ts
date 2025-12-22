@@ -90,6 +90,25 @@ export function useProgram(id: string) {
   });
 }
 
+export function useProgramPackages(programId: string) {
+  return useQuery({
+    queryKey: ["program-packages", programId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("programs_packages")
+        .select(`
+          id,
+          package_id,
+          packages(id, name, price)
+        `)
+        .eq("program_id", programId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!programId,
+  });
+}
+
 export function useCreateProgram() {
   const queryClient = useQueryClient();
   return useMutation({
