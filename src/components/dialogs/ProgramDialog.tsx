@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
 import { useCreateProgram, useUpdateProgram, useCreateProgramsWithPackages, Program } from "@/hooks/usePrograms";
 import { useReferenceData } from "@/hooks/useReferenceData";
 import { formatProgramName, formatPackageName, generateProgramDates, splitWeeksIntoPackages } from "@/lib/programUtils";
@@ -387,6 +389,42 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
           {/* Package Fields - Show seamlessly when creating package */}
           {createPackage && !program && (
             <>
+              {/* Name Previews - Editable, at top with collapsible programs */}
+              {packagePreviewData && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Package Names</Label>
+                    {packagePreviewData.packages.map((pkg, idx) => (
+                      <Input
+                        key={`pkg-${idx}`}
+                        value={pkg.name}
+                        onChange={(e) => setPackageNameOverrides({ ...packageNameOverrides, [idx]: e.target.value })}
+                        placeholder={pkg.generatedName}
+                        className="text-sm"
+                      />
+                    ))}
+                  </div>
+
+                  <Collapsible>
+                    <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium w-full hover:text-foreground/80 transition-colors">
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 [&[data-state=open]>svg]:rotate-180" />
+                      <span>Program Names ({packagePreviewData.programs.length})</span>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 pt-2">
+                      {packagePreviewData.programs.map((prog, idx) => (
+                        <Input
+                          key={`prog-${idx}`}
+                          value={prog.name}
+                          onChange={(e) => setProgramNameOverrides({ ...programNameOverrides, [idx]: e.target.value })}
+                          placeholder={prog.generatedName}
+                          className="text-sm"
+                        />
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Number of Weeks</Label>
@@ -459,37 +497,6 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                   />
                 </div>
               </div>
-
-              {/* Name Previews - Editable */}
-              {packagePreviewData && (
-                <div className="space-y-3 pt-2">
-                  <Label className="text-sm font-medium">Package Names</Label>
-                  <div className="space-y-2">
-                    {packagePreviewData.packages.map((pkg, idx) => (
-                      <Input
-                        key={`pkg-${idx}`}
-                        value={pkg.name}
-                        onChange={(e) => setPackageNameOverrides({ ...packageNameOverrides, [idx]: e.target.value })}
-                        placeholder={pkg.generatedName}
-                        className="text-sm"
-                      />
-                    ))}
-                  </div>
-
-                  <Label className="text-sm font-medium">Program Names</Label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {packagePreviewData.programs.map((prog, idx) => (
-                      <Input
-                        key={`prog-${idx}`}
-                        value={prog.name}
-                        onChange={(e) => setProgramNameOverrides({ ...programNameOverrides, [idx]: e.target.value })}
-                        placeholder={prog.generatedName}
-                        className="text-sm"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Price Preview - Subtle styling */}
               {pricePreview && pricePreview.length > 0 && (
