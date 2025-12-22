@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  formatProgramName,
+  formatPackageName,
+  generateProgramDates,
+  splitWeeksIntoPackages,
+} from "@/lib/programUtils";
+import { addWeeks } from "date-fns";
 
 export interface Program {
   id: string;
@@ -19,6 +26,24 @@ export interface Program {
   categories?: { name: string } | null;
   locations?: { name: string } | null;
   seasons?: { name: string } | null;
+}
+
+export interface PackageCreationData {
+  startDate: Date;
+  numberOfWeeks: number;
+  numberOfPackages: number;
+  individualDayPrice: number;
+  packagePerDayPrice: number;
+  packagePriceOverride: number | null;
+  maxRegistrations: number;
+  startTime: string;
+  endTime: string;
+  levelId: string | null;
+  categoryId: string | null;
+  locationId: string | null;
+  seasonId: string | null;
+  levelName: string | null;
+  categoryName: string | null;
 }
 
 export function usePrograms() {
@@ -121,6 +146,131 @@ export function useDeleteProgram() {
     },
     onError: (error) => {
       toast.error("Failed to delete program: " + error.message);
+    },
+  });
+}
+
+export function useCreateProgramsWithPackages() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: PackageCreationData) => {
+      const {
+        startDate,
+        numberOfWeeks,
+        numberOfPackages,
+        individualDayPrice,
+        packagePerDayPrice,
+        packagePriceOverride,
+        maxRegistrations,
+        startTime,
+        endTime,
+        levelId,
+        categoryId,
+        locationId,
+        seasonId,
+        levelName,
+        categoryName,
+      } = data;
+
+      // Generate all program dates
+      const allDates = generateProgramDates(startDate, numberOfWeeks);
+
+      // Split weeks into packages
+      const packageSplits = splitWeeksIntoPackages(numberOfWeeks, numberOfPackages);
+
+      const createdPackages: string[] = [];
+      const createdPrograms: string[] = [];
+
+      for (const split of packageSplits) {
+        const packageDates = allDates.slice(split.startWeekIndex, split.endWeekIndex + 1);
+        const packageStartDate = packageDates[0];
+        const packageEndDate = packageDates[packageDates.length - 1];
+
+        // Calculate package price
+        const calculatedPackagePrice = packagePerDayPrice * split.weeksCount;
+        const finalPackagePrice = packagePriceOverride ?? calculatedPackagePrice;
+
+        // Create package name
+        const packageName = formatPackageName(
+          packageStartDate,
+          packageEndDate,
+          split.weeksCount,
+          startTime,
+          endTime,
+          levelName,
+          categoryName
+        );
+
+        // Insert package
+        const { data: pkg, error: pkgError } = await supabase
+          .from("packages")
+          .insert({
+            name: packageName,
+            price: finalPackagePrice,
+            location_id: locationId,
+          })
+          .select()
+          .single();
+
+        if (pkgError) throw pkgError;
+        createdPackages.push(pkg.id);
+
+        // Create programs for this package
+        for (const programDate of packageDates) {
+          const programName = formatProgramName(
+            programDate,
+            startTime,
+            endTime,
+            levelName
+          );
+
+          const dateStr = programDate.toISOString().split("T")[0];
+
+          // Insert program
+          const { data: program, error: programError } = await supabase
+            .from("programs")
+            .insert({
+              name: programName,
+              date: dateStr,
+              start_time: startTime,
+              end_time: endTime,
+              price: individualDayPrice,
+              max_registrations: maxRegistrations,
+              level_id: levelId,
+              category_id: categoryId,
+              location_id: locationId,
+              season_id: seasonId,
+            })
+            .select()
+            .single();
+
+          if (programError) throw programError;
+          createdPrograms.push(program.id);
+
+          // Link program to package
+          const { error: linkError } = await supabase
+            .from("programs_packages")
+            .insert({
+              program_id: program.id,
+              package_id: pkg.id,
+            });
+
+          if (linkError) throw linkError;
+        }
+      }
+
+      return { packages: createdPackages, programs: createdPrograms };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["programs"] });
+      queryClient.invalidateQueries({ queryKey: ["packages"] });
+      toast.success(
+        `Created ${result.packages.length} package(s) with ${result.programs.length} programs`
+      );
+    },
+    onError: (error) => {
+      toast.error("Failed to create packages: " + error.message);
     },
   });
 }
