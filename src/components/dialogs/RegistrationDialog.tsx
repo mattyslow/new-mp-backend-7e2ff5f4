@@ -67,8 +67,16 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
     if (!programs) return [];
     return programs.filter((p) => {
       const programDate = startOfDay(parseISO(p.date));
-      if (filters.dateFrom && isBefore(programDate, startOfDay(filters.dateFrom))) return false;
-      if (filters.dateTo && isAfter(programDate, startOfDay(filters.dateTo))) return false;
+      
+      if (filters.dateFrom) {
+        const fromDate = startOfDay(filters.dateFrom);
+        // If no dateTo specified, only show programs on the exact dateFrom
+        const toDate = filters.dateTo ? startOfDay(filters.dateTo) : fromDate;
+        
+        if (isBefore(programDate, fromDate)) return false;
+        if (isAfter(programDate, toDate)) return false;
+      }
+      
       if (filters.locationId && p.location_id !== filters.locationId) return false;
       if (filters.levelId && p.level_id !== filters.levelId) return false;
       if (filters.categoryId && p.category_id !== filters.categoryId) return false;
