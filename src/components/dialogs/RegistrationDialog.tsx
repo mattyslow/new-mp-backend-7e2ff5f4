@@ -424,7 +424,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
 
           {/* Selected Programs View */}
           {activeTab === "program" && selectedProgramIds.size > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2 border-t pt-3">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">
                   Selected Programs ({selectedProgramIds.size})
@@ -440,35 +440,31 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
                   Clear All
                 </Button>
               </div>
-              <ScrollArea className="max-h-[120px] border rounded-md bg-muted/30">
-                <div className="p-2 flex flex-wrap gap-1.5">
-                  {Array.from(selectedProgramIds).map((id) => {
-                    const program = programs?.find((p) => p.id === id);
-                    if (!program) return null;
-                    return (
-                      <Badge
-                        key={id}
-                        variant="secondary"
-                        className="flex items-center gap-1 pr-1"
+              <div className="flex flex-wrap gap-2">
+                {Array.from(selectedProgramIds).map((id) => {
+                  const program = programs?.find((p) => p.id === id);
+                  if (!program) return null;
+                  return (
+                    <Badge
+                      key={id}
+                      variant="outline"
+                      className="flex items-center gap-1.5 py-1 px-2 bg-background"
+                    >
+                      <span className="text-sm font-medium max-w-[180px] truncate">{program.name}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {format(parseISO(program.date), "MMM d")}
+                      </span>
+                      <button
+                        type="button"
+                        className="ml-1 hover:text-destructive"
+                        onClick={() => toggleProgramSelection(id)}
                       >
-                        <span className="max-w-[150px] truncate">{program.name}</span>
-                        <span className="text-muted-foreground text-xs">
-                          {format(parseISO(program.date), "MMM d")}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-4 p-0 hover:bg-transparent"
-                          onClick={() => toggleProgramSelection(id)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
             </div>
           )}
 
