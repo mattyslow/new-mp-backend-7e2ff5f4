@@ -5,22 +5,14 @@ import { DataTable } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Edit, Trash2 } from "lucide-react";
-import { usePrograms, useDeleteProgram, Program } from "@/hooks/usePrograms";
-import { usePackages, useDeletePackage, Package } from "@/hooks/usePackages";
+import { usePrograms, Program } from "@/hooks/usePrograms";
+import { usePackages, Package } from "@/hooks/usePackages";
 import { ProgramDialog } from "@/components/dialogs/ProgramDialog";
 import { PackageDialog } from "@/components/dialogs/PackageDialog";
 import { PackageProgramsDialog } from "@/components/dialogs/PackageProgramsDialog";
+import { DeleteProgramDialog } from "@/components/dialogs/DeleteProgramDialog";
+import { DeletePackageDialog } from "@/components/dialogs/DeletePackageDialog";
 import { format } from "date-fns";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 type ViewTab = "programs" | "packages";
 
@@ -29,17 +21,15 @@ export default function Programs() {
   
   // Programs state
   const { data: programs, isLoading: programsLoading } = usePrograms();
-  const deleteProgram = useDeleteProgram();
   const [programDialogOpen, setProgramDialogOpen] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
-  const [deleteProgramId, setDeleteProgramId] = useState<string | null>(null);
+  const [deletingProgram, setDeletingProgram] = useState<Program | null>(null);
 
   // Packages state
   const { data: packages, isLoading: packagesLoading } = usePackages();
-  const deletePackage = useDeletePackage();
   const [packageDialogOpen, setPackageDialogOpen] = useState(false);
   const [editingPackage, setEditingPackage] = useState<Package | null>(null);
-  const [deletePackageId, setDeletePackageId] = useState<string | null>(null);
+  const [deletingPackage, setDeletingPackage] = useState<Package | null>(null);
   const [viewingPackage, setViewingPackage] = useState<Package | null>(null);
 
   const programColumns = [
@@ -95,7 +85,7 @@ export default function Programs() {
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
-              setDeleteProgramId(program.id);
+              setDeletingProgram(program);
             }}
           >
             <Trash2 className="h-4 w-4 text-destructive" />
@@ -138,7 +128,7 @@ export default function Programs() {
             size="icon"
             onClick={(e) => {
               e.stopPropagation();
-              setDeletePackageId(pkg.id);
+              setDeletingPackage(pkg);
             }}
           >
             <Trash2 className="h-4 w-4 text-destructive" />
@@ -226,57 +216,19 @@ export default function Programs() {
         pkg={viewingPackage}
       />
 
-      {/* Delete Program Confirmation */}
-      <AlertDialog open={!!deleteProgramId} onOpenChange={() => setDeleteProgramId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Program</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this program? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteProgramId) {
-                  deleteProgram.mutate(deleteProgramId);
-                  setDeleteProgramId(null);
-                }
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Program Dialog */}
+      <DeleteProgramDialog
+        program={deletingProgram}
+        open={!!deletingProgram}
+        onOpenChange={(open) => !open && setDeletingProgram(null)}
+      />
 
-      {/* Delete Package Confirmation */}
-      <AlertDialog open={!!deletePackageId} onOpenChange={() => setDeletePackageId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Package</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this package? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deletePackageId) {
-                  deletePackage.mutate(deletePackageId);
-                  setDeletePackageId(null);
-                }
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete Package Dialog */}
+      <DeletePackageDialog
+        pkg={deletingPackage}
+        open={!!deletingPackage}
+        onOpenChange={(open) => !open && setDeletingPackage(null)}
+      />
     </Layout>
   );
 }
