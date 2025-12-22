@@ -227,7 +227,7 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
       updateProgram.mutate({ id: program.id, ...formData }, { onSuccess: () => onOpenChange(false) });
     } else if (createPackage) {
       // Create packages with programs - use formData.date as start date
-      const startDate = new Date(formData.date);
+      const startDate = parseLocalDate(formData.date);
       createProgramsWithPackages.mutate(
         {
           startDate,

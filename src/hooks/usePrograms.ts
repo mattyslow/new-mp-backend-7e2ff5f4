@@ -233,7 +233,10 @@ export function useCreateProgramsWithPackages() {
           );
           const programName = programNameOverrides[globalProgramIndex] ?? generatedProgramName;
 
-          const dateStr = programDate.toISOString().split("T")[0];
+          const year = programDate.getFullYear();
+          const month = String(programDate.getMonth() + 1).padStart(2, '0');
+          const day = String(programDate.getDate()).padStart(2, '0');
+          const dateStr = `${year}-${month}-${day}`;
 
           // Insert program
           const { data: program, error: programError } = await supabase
