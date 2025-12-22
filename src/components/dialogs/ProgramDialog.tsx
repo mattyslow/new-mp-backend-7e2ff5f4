@@ -106,8 +106,10 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
   // Generate single program name preview
   const singleProgramNamePreview = useMemo(() => {
     if (!formData.date || !formData.start_time || !formData.end_time) return "";
+    const date = new Date(formData.date);
+    if (isNaN(date.getTime())) return "";
     return formatProgramName(
-      new Date(formData.date),
+      date,
       formData.start_time,
       formData.end_time,
       selectedLevel?.name
@@ -129,6 +131,16 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
     const packages = packageSplits.map((split, idx) => {
       const pkgStartDate = programDates[split.startWeekIndex];
       const pkgEndDate = programDates[split.endWeekIndex];
+      // Skip if dates are undefined
+      if (!pkgStartDate || !pkgEndDate) {
+        return {
+          name: packageNameOverrides[idx] ?? "",
+          generatedName: "",
+          weeks: split.weeksCount,
+          startWeekIndex: split.startWeekIndex,
+          endWeekIndex: split.endWeekIndex,
+        };
+      }
       const generatedName = formatPackageName(
         pkgStartDate,
         pkgEndDate,
