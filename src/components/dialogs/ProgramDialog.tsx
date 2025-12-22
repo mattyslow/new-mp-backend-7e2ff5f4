@@ -169,70 +169,7 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
           <DialogTitle>{program ? "Edit Program" : "Add Program"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Base Program Fields - Only show when NOT creating package or when editing */}
-          {(!createPackage || program) && (
-            <>
-              <div>
-                <Label>Name</Label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required={!createPackage}
-                  placeholder={createPackage ? "Auto-generated from package" : "Program name"}
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label>Date</Label>
-                  <Input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    required={!createPackage}
-                  />
-                </div>
-                <div>
-                  <Label>Start</Label>
-                  <Input
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label>End</Label>
-                  <Input
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Price</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <div>
-                  <Label>Max Registrations</Label>
-                  <Input
-                    type="number"
-                    value={formData.max_registrations}
-                    onChange={(e) => setFormData({ ...formData, max_registrations: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Reference Fields - Always show */}
+          {/* Reference Fields - Always show first */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Location</Label>
@@ -298,45 +235,84 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
             </div>
           </div>
 
-          {/* Create Package Toggle - Only show when adding new program */}
-          {!program && (
+          {/* Time fields - Always show */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Start Time</Label>
+              <Input
+                type="time"
+                value={formData.start_time}
+                onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <Label>End Time</Label>
+              <Input
+                type="time"
+                value={formData.end_time}
+                onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                required
+              />
+            </div>
+          </div>
+
+          {/* Single Program Fields - Only show when NOT creating package */}
+          {(!createPackage || program) && (
             <>
-              <Separator className="my-4" />
-              <div className="flex items-center justify-between">
+              <div>
+                <Label>Name</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required={!createPackage}
+                  placeholder="Program name"
+                />
+              </div>
+              <div>
+                <Label>Date</Label>
+                <Input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  required={!createPackage}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-base font-semibold">Create Package</Label>
-                  <p className="text-sm text-muted-foreground">Generate multiple programs as a package</p>
+                  <Label>Price</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                  />
                 </div>
-                <Switch checked={createPackage} onCheckedChange={setCreatePackage} />
+                <div>
+                  <Label>Max Registrations</Label>
+                  <Input
+                    type="number"
+                    value={formData.max_registrations}
+                    onChange={(e) => setFormData({ ...formData, max_registrations: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
               </div>
             </>
           )}
 
-          {/* Package Fields - Show when creating package */}
-          {createPackage && !program && (
-            <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
-              {/* Time fields for package */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Start Time</Label>
-                  <Input
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label>End Time</Label>
-                  <Input
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
+          {/* Create Package Toggle - Only show when adding new program */}
+          {!program && (
+            <div className="flex items-center gap-3 pt-2">
+              <Switch checked={createPackage} onCheckedChange={setCreatePackage} />
+              <Label className="text-sm font-medium cursor-pointer" onClick={() => setCreatePackage(!createPackage)}>
+                Create as package
+              </Label>
+            </div>
+          )}
 
+          {/* Package Fields - Show seamlessly when creating package */}
+          {createPackage && !program && (
+            <>
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label>Start Date</Label>
@@ -370,8 +346,6 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                 </div>
               </div>
 
-              <Separator />
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Individual Day Price</Label>
@@ -381,7 +355,7 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                     min="0"
                     value={packageData.individualDayPrice}
                     onChange={(e) => setPackageData({ ...packageData, individualDayPrice: parseFloat(e.target.value) || 0 })}
-                    placeholder="Price for single session"
+                    placeholder="Single session price"
                   />
                 </div>
                 <div>
@@ -392,25 +366,25 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                     min="0"
                     value={packageData.packagePerDayPrice}
                     onChange={(e) => setPackageData({ ...packageData, packagePerDayPrice: parseFloat(e.target.value) || 0 })}
-                    placeholder="Discounted rate per day"
+                    placeholder="Discounted rate"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Package Price Override (optional)</Label>
+                  <Label>Package Price Override</Label>
                   <Input
                     type="number"
                     step="0.01"
                     min="0"
                     value={packageData.packagePriceOverride}
                     onChange={(e) => setPackageData({ ...packageData, packagePriceOverride: e.target.value })}
-                    placeholder="Override calculated price"
+                    placeholder="Optional"
                   />
                 </div>
                 <div>
-                  <Label>Max Registrations (per program)</Label>
+                  <Label>Max Registrations</Label>
                   <Input
                     type="number"
                     min="0"
@@ -421,26 +395,24 @@ export function ProgramDialog({ open, onOpenChange, program }: ProgramDialogProp
                 </div>
               </div>
 
-              {/* Price Preview */}
+              {/* Price Preview - Subtle styling */}
               {pricePreview && pricePreview.length > 0 && (
-                <div className="bg-background p-3 rounded border">
-                  <Label className="text-sm font-medium">Price Preview</Label>
-                  <div className="mt-2 space-y-1 text-sm">
+                <div className="text-sm text-muted-foreground pt-2">
+                  <div className="space-y-1">
                     {pricePreview.map((pkg, idx) => (
                       <div key={idx} className="flex justify-between">
                         <span>Package {idx + 1}: {pkg.weeks} weeks</span>
-                        <span className="font-medium">${pkg.price.toFixed(2)}</span>
+                        <span>${pkg.price.toFixed(2)}</span>
                       </div>
                     ))}
-                    <Separator className="my-2" />
-                    <div className="flex justify-between font-semibold">
+                    <div className="flex justify-between font-medium text-foreground pt-1 border-t border-border">
                       <span>Total ({packageData.numberOfWeeks} programs)</span>
                       <span>${pricePreview.reduce((sum, pkg) => sum + pkg.price, 0).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
               )}
-            </div>
+            </>
           )}
 
           <div className="flex justify-end gap-2 pt-4">
