@@ -123,11 +123,13 @@ export function useImportRawData() {
       data, 
       locationId, 
       levelMap, 
+      categoryMap,
       seasonId 
     }: { 
       data: RawDataRow[]; 
       locationId: string;
       levelMap: Record<string, string>;
+      categoryMap: Record<string, string>;
       seasonId: string | null;
     }) => {
       const programs = data.filter(d => !d.isPackage);
@@ -143,6 +145,7 @@ export function useImportRawData() {
         end_time: p.endTime,
         location_id: locationId,
         level_id: levelMap[p.level] || null,
+        category_id: categoryMap[p.category] || null,
         season_id: seasonId,
         max_registrations: 0,
       }));

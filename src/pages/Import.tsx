@@ -63,8 +63,10 @@ export default function Import() {
   // Hooks
   const { data: locations } = useReferenceData('locations');
   const { data: levels } = useReferenceData('levels');
+  const { data: categories } = useReferenceData('categories');
   const { data: seasons } = useReferenceData('seasons');
   const createLevel = useCreateReferenceItem('levels');
+  const createCategory = useCreateReferenceItem('categories');
   const importRawData = useImportRawData();
   const importCapacity = useImportProgramsCapacity();
   const importFormResponses = useImportFormResponses();
@@ -123,10 +125,29 @@ export default function Import() {
       }
     }
     
+    // Create category map - create missing categories first
+    const uniqueCategories = [...new Set(rawDataParsed.map(r => r.category).filter(c => c))];
+    const categoryMap: Record<string, string> = {};
+    
+    for (const categoryName of uniqueCategories) {
+      const existing = categories?.find(c => c.name.toLowerCase() === categoryName.toLowerCase());
+      if (existing) {
+        categoryMap[categoryName] = existing.id;
+      } else {
+        // Create new category
+        await createCategory.mutateAsync(categoryName);
+        const { data: newCategory } = await import('@/integrations/supabase/client').then(m => 
+          m.supabase.from('categories').select('id').eq('name', categoryName).single()
+        );
+        if (newCategory) categoryMap[categoryName] = newCategory.id;
+      }
+    }
+    
     await importRawData.mutateAsync({
       data: rawDataParsed,
       locationId: selectedLocation,
       levelMap,
+      categoryMap,
       seasonId: selectedSeason || null,
     });
     
