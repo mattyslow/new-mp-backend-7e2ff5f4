@@ -219,6 +219,69 @@ export function useDeleteProgram() {
   });
 }
 
+export function useUpdateProgramMaxRegistrations() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      programId,
+      maxRegistrations,
+      updateSeries,
+    }: {
+      programId: string;
+      maxRegistrations: number;
+      updateSeries: boolean;
+    }) => {
+      if (updateSeries) {
+        // Get all package IDs for this program
+        const { data: packages } = await supabase
+          .from("programs_packages")
+          .select("package_id")
+          .eq("program_id", programId);
+
+        if (packages && packages.length > 0) {
+          // Get all program IDs in these packages
+          const packageIds = packages.map((p) => p.package_id);
+          const { data: programsInPackages } = await supabase
+            .from("programs_packages")
+            .select("program_id")
+            .in("package_id", packageIds);
+
+          const programIds = [
+            ...new Set(programsInPackages?.map((p) => p.program_id) || []),
+          ];
+
+          // Update all programs in the series
+          const { error } = await supabase
+            .from("programs")
+            .update({ max_registrations: maxRegistrations })
+            .in("id", programIds);
+
+          if (error) throw error;
+          return { updatedCount: programIds.length };
+        }
+      }
+
+      // Update only this program
+      const { error } = await supabase
+        .from("programs")
+        .update({ max_registrations: maxRegistrations })
+        .eq("id", programId);
+
+      if (error) throw error;
+      return { updatedCount: 1 };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["programs"] });
+      queryClient.invalidateQueries({ queryKey: ["registration-counter-programs"] });
+      toast.success(`Updated ${result.updatedCount} program(s)`);
+    },
+    onError: (error) => {
+      toast.error("Failed to update: " + error.message);
+    },
+  });
+}
+
 export function useCreateProgramsWithPackages() {
   const queryClient = useQueryClient();
 

@@ -10,12 +10,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Program } from "@/hooks/usePrograms";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Program, useUpdateProgramMaxRegistrations } from "@/hooks/usePrograms";
 import { useProgramRegistrations } from "@/hooks/useRegistrations";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Users, Package, Calendar, Clock, MapPin, X } from "lucide-react";
+import { Users, Package, Calendar, Clock, MapPin, X, Pencil } from "lucide-react";
 import { DeleteRegistrationDialog } from "./DeleteRegistrationDialog";
 
 interface ProgramDetailsDialogProps {
@@ -47,6 +49,11 @@ export function ProgramDetailsDialog({
 }: ProgramDetailsDialogProps) {
   const navigate = useNavigate();
   const [registrationToDelete, setRegistrationToDelete] = useState<RegistrationToDelete | null>(null);
+  const [isEditingCapacity, setIsEditingCapacity] = useState(false);
+  const [newMaxRegistrations, setNewMaxRegistrations] = useState(0);
+  const [updateEntireSeries, setUpdateEntireSeries] = useState(false);
+
+  const updateCapacity = useUpdateProgramMaxRegistrations();
 
   const { data: registrations, isLoading: registrationsLoading } = useProgramRegistrations(
     program?.id ?? ""
@@ -98,6 +105,33 @@ export function ProgramDetailsDialog({
     });
   };
 
+  const handleSaveCapacity = () => {
+    updateCapacity.mutate(
+      {
+        programId: program.id,
+        maxRegistrations: newMaxRegistrations,
+        updateSeries: updateEntireSeries,
+      },
+      {
+        onSuccess: () => {
+          setIsEditingCapacity(false);
+          setUpdateEntireSeries(false);
+        },
+      }
+    );
+  };
+
+  const handleStartEditing = () => {
+    setNewMaxRegistrations(maxRegistrations);
+    setIsEditingCapacity(true);
+  };
+
+  const handleCancelEditing = () => {
+    setIsEditingCapacity(false);
+    setUpdateEntireSeries(false);
+  };
+
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,12 +164,73 @@ export function ProgramDetailsDialog({
                   <Users className="h-4 w-4" />
                   Capacity
                 </span>
-                <span className="text-muted-foreground">
-                  {registeredCount} / {maxRegistrations || "∞"} spots
-                </span>
+                {isEditingCapacity ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      value={newMaxRegistrations}
+                      onChange={(e) => setNewMaxRegistrations(parseInt(e.target.value) || 0)}
+                      className="w-20 h-7 text-sm"
+                      min={0}
+                    />
+                    <span className="text-muted-foreground">spots</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">
+                      {registeredCount} / {maxRegistrations || "∞"} spots
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={handleStartEditing}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
               </div>
-              {maxRegistrations > 0 && (
+
+              {maxRegistrations > 0 && !isEditingCapacity && (
                 <Progress value={capacityPercent} className="h-2" />
+              )}
+
+              {/* Series update checkbox - shown when editing and program is in packages */}
+              {isEditingCapacity && programPackages && programPackages.length > 0 && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    id="updateSeries"
+                    checked={updateEntireSeries}
+                    onCheckedChange={(checked) => setUpdateEntireSeries(!!checked)}
+                  />
+                  <label htmlFor="updateSeries" className="cursor-pointer">
+                    Apply to all{" "}
+                    {programPackages.length === 1
+                      ? `programs in "${programPackages[0].packages?.name}"`
+                      : `programs in ${programPackages.length} packages`}
+                  </label>
+                </div>
+              )}
+
+              {/* Save/Cancel buttons when editing */}
+              {isEditingCapacity && (
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    onClick={handleSaveCapacity}
+                    disabled={updateCapacity.isPending}
+                  >
+                    {updateCapacity.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEditing}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               )}
             </div>
 
