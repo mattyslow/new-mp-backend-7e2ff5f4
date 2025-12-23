@@ -4,6 +4,7 @@ import {
   Calendar,
   ClipboardList,
   Settings,
+  Upload,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -23,6 +24,7 @@ const mainItems = [
   { title: "Players", url: "/players", icon: Users },
   { title: "Programs", url: "/programs", icon: Calendar },
   { title: "Registrations", url: "/registrations", icon: ClipboardList },
+  { title: "Import Data", url: "/import", icon: Upload },
 ];
 
 const settingsItems = [
