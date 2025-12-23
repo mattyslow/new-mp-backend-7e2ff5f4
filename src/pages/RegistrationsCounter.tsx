@@ -29,14 +29,20 @@ const RegistrationsCounter = () => {
   const { rows, weekCount, weekDates, isLoading } = useRegistrationCounter(startDate, endDate);
   const { data: selectedProgram } = useProgram(selectedProgramId ?? "");
 
-  // Track first occurrence of each day
-  const rowsWithDayDisplay = useMemo(() => {
-    const seenDays = new Set<string>();
-    return rows.map((row) => {
-      const isFirstOfDay = !seenDays.has(row.dayName);
-      if (isFirstOfDay) seenDays.add(row.dayName);
-      return { ...row, isFirstOfDay };
+  // Group rows by day
+  const groupedByDay = useMemo(() => {
+    const dayGroups: { dayName: string; rows: typeof rows }[] = [];
+    let currentDay = "";
+    
+    rows.forEach((row) => {
+      if (row.dayName !== currentDay) {
+        currentDay = row.dayName;
+        dayGroups.push({ dayName: row.dayName, rows: [] });
+      }
+      dayGroups[dayGroups.length - 1].rows.push(row);
     });
+    
+    return dayGroups;
   }, [rows]);
 
   return (
@@ -107,46 +113,54 @@ const RegistrationsCounter = () => {
               </tr>
             </thead>
             <tbody>
-              {rowsWithDayDisplay.map((row) => (
-                <tr 
-                  key={row.seriesKey} 
-                  className={cn(
-                    "border-b border-border/50 hover:bg-muted/30",
-                    row.isFirstOfDay && "border-t-2 border-t-border"
-                  )}
-                >
-                  <td className="sticky left-0 z-10 bg-background py-1 px-2">
-                    {row.isFirstOfDay ? (
-                      <span><span className="font-semibold">{row.dayName}</span> {row.dayTime.replace(/^[A-Za-z]+s?\s*/, '')}</span>
-                    ) : (
-                      <span className="pl-[1ch]">{row.dayTime.replace(/^[A-Za-z]+s?\s*/, '')}</span>
-                    )}
-                  </td>
-                  <td className="sticky left-[180px] z-10 bg-background py-1 px-2">
-                    {row.category}
-                  </td>
-                  <td className="sticky left-[280px] z-10 bg-background py-1 px-2">
-                    {row.level}
-                  </td>
-                  {Array.from({ length: weekCount }, (_, weekIndex) => {
-                    const weekNum = weekIndex + 1;
-                    const weekEntry = row.weekData.find((w) => w.weekNumber === weekNum);
-                    return (
-                      <td 
-                        key={weekIndex} 
-                        className={cn(
-                          "text-center py-1 px-1",
-                          weekEntry ? getCellColor(weekEntry.count, row.maxRegistrations) : "text-muted-foreground/50",
-                          weekEntry && "cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all rounded"
-                        )}
-                        title={weekEntry ? `${format(new Date(weekEntry.date + "T00:00:00"), "MMM d, yyyy")}: ${weekEntry.count}/${row.maxRegistrations}` : "No session"}
-                        onClick={() => weekEntry && setSelectedProgramId(weekEntry.programId)}
-                      >
-                        {weekEntry ? weekEntry.count : "—"}
+              {groupedByDay.map((dayGroup) => (
+                <>
+                  {/* Day Header Row */}
+                  <tr key={`day-${dayGroup.dayName}`} className="bg-muted/70">
+                    <td 
+                      colSpan={3 + weekCount} 
+                      className="sticky left-0 py-1 px-2 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
+                    >
+                      {dayGroup.dayName}
+                    </td>
+                  </tr>
+                  
+                  {/* Time rows for this day */}
+                  {dayGroup.rows.map((row) => (
+                    <tr 
+                      key={row.seriesKey} 
+                      className="border-b border-border/30 hover:bg-muted/30"
+                    >
+                      <td className="sticky left-0 z-10 bg-background py-1 px-2 pl-4">
+                        {row.timeDisplay}
                       </td>
-                    );
-                  })}
-                </tr>
+                      <td className="sticky left-[180px] z-10 bg-background py-1 px-2">
+                        {row.category}
+                      </td>
+                      <td className="sticky left-[280px] z-10 bg-background py-1 px-2">
+                        {row.level}
+                      </td>
+                      {Array.from({ length: weekCount }, (_, weekIndex) => {
+                        const weekNum = weekIndex + 1;
+                        const weekEntry = row.weekData.find((w) => w.weekNumber === weekNum);
+                        return (
+                          <td 
+                            key={weekIndex} 
+                            className={cn(
+                              "text-center py-1 px-1",
+                              weekEntry ? getCellColor(weekEntry.count, row.maxRegistrations) : "text-muted-foreground/50",
+                              weekEntry && "cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all rounded"
+                            )}
+                            title={weekEntry ? `${format(new Date(weekEntry.date + "T00:00:00"), "MMM d, yyyy")}: ${weekEntry.count}/${row.maxRegistrations}` : "No session"}
+                            onClick={() => weekEntry && setSelectedProgramId(weekEntry.programId)}
+                          >
+                            {weekEntry ? weekEntry.count : "—"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </>
               ))}
             </tbody>
           </table>

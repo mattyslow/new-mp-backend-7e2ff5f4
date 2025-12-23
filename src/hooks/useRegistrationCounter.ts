@@ -21,7 +21,9 @@ export interface RegistrationRow {
   seriesKey: string;
   dayOfWeek: number;
   dayName: string;
-  dayTime: string;
+  startTime: string;
+  endTime: string;
+  timeDisplay: string;
   category: string;
   level: string;
   maxRegistrations: number;
@@ -113,7 +115,7 @@ export const useRegistrationCounter = (startDate?: Date, endDate?: Date) => {
       const dayOfWeek = getDay(new Date(firstProgram.date + "T00:00:00"));
       const dayName = dayNames[dayOfWeek];
       
-      const dayTime = `${dayName}s ${formatTime(firstProgram.start_time)} - ${formatTime(firstProgram.end_time)}`;
+      const timeDisplay = `${formatTime(firstProgram.start_time)} - ${formatTime(firstProgram.end_time)}`;
       
       const weekData = seriesPrograms.map((program) => {
         const programDate = new Date(program.date + "T00:00:00");
@@ -130,7 +132,9 @@ export const useRegistrationCounter = (startDate?: Date, endDate?: Date) => {
         seriesKey,
         dayOfWeek,
         dayName,
-        dayTime,
+        startTime: firstProgram.start_time,
+        endTime: firstProgram.end_time,
+        timeDisplay,
         category: firstProgram.categories?.name || "—",
         level: firstProgram.levels?.name || "—",
         maxRegistrations: firstProgram.max_registrations,
@@ -138,12 +142,12 @@ export const useRegistrationCounter = (startDate?: Date, endDate?: Date) => {
       });
     });
 
-    // Sort rows by day of week (Monday first), then by start time
+    // Sort rows by day of week (Monday first), then by start time (HH:MM format sorts correctly)
     rows.sort((a, b) => {
       const dayA = a.dayOfWeek === 0 ? 7 : a.dayOfWeek;
       const dayB = b.dayOfWeek === 0 ? 7 : b.dayOfWeek;
       if (dayA !== dayB) return dayA - dayB;
-      return a.dayTime.localeCompare(b.dayTime);
+      return a.startTime.localeCompare(b.startTime);
     });
 
     return { rows, weekCount: totalWeeks, weekDates: weekDatesArray };
