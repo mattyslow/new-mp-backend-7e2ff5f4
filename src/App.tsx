@@ -8,6 +8,7 @@ import Players from "./pages/Players";
 import PlayerProfile from "./pages/PlayerProfile";
 import Programs from "./pages/Programs";
 import Registrations from "./pages/Registrations";
+import RegistrationsCounter from "./pages/RegistrationsCounter";
 import Import from "./pages/Import";
 import { LevelsSettings, CategoriesSettings, LocationsSettings, SeasonsSettings } from "./pages/Settings";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/programs" element={<Programs />} />
           <Route path="/packages" element={<Navigate to="/programs" replace />} />
           <Route path="/registrations" element={<Registrations />} />
+          <Route path="/registrations-counter" element={<RegistrationsCounter />} />
           <Route path="/settings/levels" element={<LevelsSettings />} />
           <Route path="/settings/categories" element={<CategoriesSettings />} />
           <Route path="/settings/locations" element={<LocationsSettings />} />
