@@ -6,11 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Mail, Phone, CreditCard, Calendar, Clock, MapPin, Pencil, Trash2, Plus } from "lucide-react";
 import { usePlayer } from "@/hooks/usePlayers";
-import { usePlayerRegistrations, useDeleteRegistration } from "@/hooks/useRegistrations";
+import { usePlayerRegistrations } from "@/hooks/useRegistrations";
 import { PlayerDialog } from "@/components/dialogs/PlayerDialog";
 import { RegistrationDialog } from "@/components/dialogs/RegistrationDialog";
 import { EditRegistrationDialog } from "@/components/dialogs/EditRegistrationDialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DeleteRegistrationDialog } from "@/components/dialogs/DeleteRegistrationDialog";
 import { format, parseISO, isAfter, startOfDay } from "date-fns";
 
 export default function PlayerProfile() {
@@ -18,7 +18,6 @@ export default function PlayerProfile() {
   const navigate = useNavigate();
   const { data: player, isLoading: playerLoading } = usePlayer(id ?? "");
   const { data: registrations, isLoading: regsLoading } = usePlayerRegistrations(id ?? "");
-  const deleteRegistration = useDeleteRegistration();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [addRegDialogOpen, setAddRegDialogOpen] = useState(false);
@@ -28,6 +27,10 @@ export default function PlayerProfile() {
     id: string;
     programId: string | null;
     programName?: string;
+    programPrice?: number;
+    packageId: string | null;
+    packageName?: string;
+    packagePrice?: number;
   } | null>(null);
 
   const today = startOfDay(new Date());
@@ -94,6 +97,10 @@ export default function PlayerProfile() {
       id: reg.id,
       programId: reg.programs?.id ?? null,
       programName: reg.programs?.name,
+      programPrice: reg.programs?.price,
+      packageId: reg.packages?.id ?? null,
+      packageName: reg.packages?.name,
+      packagePrice: reg.packages?.price,
     });
     setEditRegDialogOpen(true);
   };
@@ -103,19 +110,12 @@ export default function PlayerProfile() {
       id: reg.id,
       programId: reg.programs?.id ?? null,
       programName: reg.programs?.name,
+      programPrice: reg.programs?.price,
+      packageId: reg.packages?.id ?? null,
+      packageName: reg.packages?.name,
+      packagePrice: reg.packages?.price,
     });
     setDeleteConfirmOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (selectedRegistration) {
-      deleteRegistration.mutate(selectedRegistration.id, {
-        onSuccess: () => {
-          setDeleteConfirmOpen(false);
-          setSelectedRegistration(null);
-        },
-      });
-    }
   };
 
   const RegistrationCard = ({ reg }: { reg: typeof registrations[0] }) => {
@@ -319,25 +319,17 @@ export default function PlayerProfile() {
         />
       )}
 
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Registration</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove this player from "{selectedRegistration?.programName}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteRegistrationDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        registration={selectedRegistration}
+        player={player ? {
+          id: player.id,
+          firstName: player.first_name,
+          lastName: player.last_name,
+          credit: Number(player.credit),
+        } : { id: "", firstName: "", lastName: "", credit: 0 }}
+      />
     </Layout>
   );
 }

@@ -154,3 +154,33 @@ export function useProgramRegistrations(programId: string) {
     enabled: !!programId,
   });
 }
+
+export function useIssueSinglePlayerCredit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ playerId, amount }: { playerId: string; amount: number }) => {
+      const { data: player, error: fetchError } = await supabase
+        .from("players")
+        .select("credit")
+        .eq("id", playerId)
+        .single();
+      if (fetchError) throw fetchError;
+      
+      const newCredit = Number(player?.credit ?? 0) + amount;
+      const { error: updateError } = await supabase
+        .from("players")
+        .update({ credit: newCredit })
+        .eq("id", playerId);
+      if (updateError) throw updateError;
+      
+      return { playerId, newCredit };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ["registrations"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to issue credit: " + error.message);
+    },
+  });
+}
