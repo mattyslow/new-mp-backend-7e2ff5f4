@@ -143,8 +143,8 @@ export function useProgramRegistrations(programId: string) {
         .from("registrations")
         .select(`
           *,
-          players(id, first_name, last_name, email),
-          packages(name)
+          players(id, first_name, last_name, email, credit),
+          packages(name, price)
         `)
         .eq("program_id", programId)
         .order("created_at", { ascending: false });
