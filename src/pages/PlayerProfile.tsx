@@ -4,10 +4,13 @@ import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, Mail, Phone, CreditCard, Calendar, Clock, MapPin } from "lucide-react";
+import { ArrowLeft, Edit, Mail, Phone, CreditCard, Calendar, Clock, MapPin, Pencil, Trash2, Plus } from "lucide-react";
 import { usePlayer } from "@/hooks/usePlayers";
-import { usePlayerRegistrations } from "@/hooks/useRegistrations";
+import { usePlayerRegistrations, useDeleteRegistration } from "@/hooks/useRegistrations";
 import { PlayerDialog } from "@/components/dialogs/PlayerDialog";
+import { RegistrationDialog } from "@/components/dialogs/RegistrationDialog";
+import { EditRegistrationDialog } from "@/components/dialogs/EditRegistrationDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { format, parseISO, isAfter, startOfDay } from "date-fns";
 
 export default function PlayerProfile() {
@@ -15,7 +18,17 @@ export default function PlayerProfile() {
   const navigate = useNavigate();
   const { data: player, isLoading: playerLoading } = usePlayer(id ?? "");
   const { data: registrations, isLoading: regsLoading } = usePlayerRegistrations(id ?? "");
+  const deleteRegistration = useDeleteRegistration();
+  
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [addRegDialogOpen, setAddRegDialogOpen] = useState(false);
+  const [editRegDialogOpen, setEditRegDialogOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedRegistration, setSelectedRegistration] = useState<{
+    id: string;
+    programId: string | null;
+    programName?: string;
+  } | null>(null);
 
   const today = startOfDay(new Date());
 
@@ -76,6 +89,35 @@ export default function PlayerProfile() {
     return `${h12}:${minutes}${ampm}`;
   };
 
+  const handleEditRegistration = (reg: typeof registrations[0]) => {
+    setSelectedRegistration({
+      id: reg.id,
+      programId: reg.programs?.id ?? null,
+      programName: reg.programs?.name,
+    });
+    setEditRegDialogOpen(true);
+  };
+
+  const handleDeleteRegistration = (reg: typeof registrations[0]) => {
+    setSelectedRegistration({
+      id: reg.id,
+      programId: reg.programs?.id ?? null,
+      programName: reg.programs?.name,
+    });
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (selectedRegistration) {
+      deleteRegistration.mutate(selectedRegistration.id, {
+        onSuccess: () => {
+          setDeleteConfirmOpen(false);
+          setSelectedRegistration(null);
+        },
+      });
+    }
+  };
+
   const RegistrationCard = ({ reg }: { reg: typeof registrations[0] }) => {
     const program = reg.programs;
     if (!program) return null;
@@ -84,13 +126,33 @@ export default function PlayerProfile() {
       <Card className="bg-card/50">
         <CardContent className="p-4">
           <div className="flex flex-col gap-2">
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between gap-2">
               <h4 className="font-medium">{program.name}</h4>
-              {reg.packages && (
-                <Badge variant="outline" className="text-xs">
-                  via {reg.packages.name}
-                </Badge>
-              )}
+              <div className="flex items-center gap-1 shrink-0">
+                {reg.packages && (
+                  <Badge variant="outline" className="text-xs">
+                    via {reg.packages.name}
+                  </Badge>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => handleEditRegistration(reg)}
+                  title="Change program"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={() => handleDeleteRegistration(reg)}
+                  title="Remove registration"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
@@ -202,7 +264,13 @@ export default function PlayerProfile() {
 
         {/* Upcoming Programs */}
         <div>
-          <h3 className="text-lg font-semibold mb-3">Upcoming Programs ({upcoming.length})</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-lg font-semibold">Upcoming Programs ({upcoming.length})</h3>
+            <Button size="sm" onClick={() => setAddRegDialogOpen(true)} className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              Add Registration
+            </Button>
+          </div>
           {upcoming.length === 0 ? (
             <p className="text-muted-foreground text-sm">No upcoming programs.</p>
           ) : (
@@ -234,6 +302,42 @@ export default function PlayerProfile() {
         onOpenChange={setDialogOpen}
         player={player}
       />
+
+      <RegistrationDialog
+        open={addRegDialogOpen}
+        onOpenChange={setAddRegDialogOpen}
+        preselectedPlayerId={id}
+      />
+
+      {selectedRegistration && (
+        <EditRegistrationDialog
+          open={editRegDialogOpen}
+          onOpenChange={setEditRegDialogOpen}
+          registrationId={selectedRegistration.id}
+          currentProgramId={selectedRegistration.programId}
+          currentProgramName={selectedRegistration.programName}
+        />
+      )}
+
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Registration</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this player from "{selectedRegistration?.programName}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 }

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 interface RegistrationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  preselectedPlayerId?: string;
 }
 
 interface Filters {
@@ -31,7 +32,7 @@ interface Filters {
   categoryId: string | null;
 }
 
-export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogProps) {
+export function RegistrationDialog({ open, onOpenChange, preselectedPlayerId }: RegistrationDialogProps) {
   const createRegistration = useCreateRegistration();
   const batchCreateRegistrations = useBatchCreateRegistrations();
   const { data: players } = usePlayers();
@@ -41,7 +42,7 @@ export function RegistrationDialog({ open, onOpenChange }: RegistrationDialogPro
   const { data: levels } = useReferenceData("levels");
   const { data: categories } = useReferenceData("categories");
 
-  const [playerId, setPlayerId] = useState("");
+  const [playerId, setPlayerId] = useState(preselectedPlayerId ?? "");
   const [selectedProgramIds, setSelectedProgramIds] = useState<Set<string>>(new Set());
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"program" | "package">("program");

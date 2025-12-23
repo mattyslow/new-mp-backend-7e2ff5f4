@@ -75,6 +75,29 @@ export function useBatchCreateRegistrations() {
   });
 }
 
+export function useUpdateRegistration() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, program_id, package_id }: { id: string; program_id?: string | null; package_id?: string | null }) => {
+      const { data, error } = await supabase
+        .from("registrations")
+        .update({ program_id, package_id })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["registrations"] });
+      toast.success("Registration updated successfully");
+    },
+    onError: (error) => {
+      toast.error("Failed to update registration: " + error.message);
+    },
+  });
+}
+
 export function useDeleteRegistration() {
   const queryClient = useQueryClient();
   return useMutation({
