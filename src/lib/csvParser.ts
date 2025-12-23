@@ -138,10 +138,8 @@ export function parseDateTimeFromItem(itemStr: string): {
   if (dateMatch) {
     const month = parseInt(dateMatch[1]);
     const day = parseInt(dateMatch[2]);
-    const currentYear = new Date().getFullYear();
-    // Use next year if the date seems to be in the past
-    const tentativeDate = new Date(currentYear, month - 1, day);
-    const year = tentativeDate < new Date() ? currentYear + 1 : currentYear;
+    // November-December = 2025, January-April = 2026
+    const year = month >= 11 ? 2025 : 2026;
     date = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
   }
   
