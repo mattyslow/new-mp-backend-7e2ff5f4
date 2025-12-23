@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { useRegistrationCounter } from "@/hooks/useRegistrationCounter";
+import { useProgram } from "@/hooks/usePrograms";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -9,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProgramDetailsDialog } from "@/components/dialogs/ProgramDetailsDialog";
 
 const getCellColor = (count: number, max: number) => {
   if (max === 0) return "";
@@ -22,8 +24,10 @@ const getCellColor = (count: number, max: number) => {
 const RegistrationsCounter = () => {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
   
   const { rows, weekCount, weekDates, isLoading } = useRegistrationCounter(startDate, endDate);
+  const { data: selectedProgram } = useProgram(selectedProgramId ?? "");
 
   // Track first occurrence of each day
   const rowsWithDayDisplay = useMemo(() => {
@@ -132,9 +136,11 @@ const RegistrationsCounter = () => {
                         key={weekIndex} 
                         className={cn(
                           "text-center py-1 px-1",
-                          weekEntry ? getCellColor(weekEntry.count, row.maxRegistrations) : "text-muted-foreground/50"
+                          weekEntry ? getCellColor(weekEntry.count, row.maxRegistrations) : "text-muted-foreground/50",
+                          weekEntry && "cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all rounded"
                         )}
                         title={weekEntry ? `${format(new Date(weekEntry.date + "T00:00:00"), "MMM d, yyyy")}: ${weekEntry.count}/${row.maxRegistrations}` : "No session"}
+                        onClick={() => weekEntry && setSelectedProgramId(weekEntry.programId)}
                       >
                         {weekEntry ? weekEntry.count : "—"}
                       </td>
@@ -146,6 +152,12 @@ const RegistrationsCounter = () => {
           </table>
         </div>
       )}
+
+      <ProgramDetailsDialog
+        open={!!selectedProgramId && !!selectedProgram}
+        onOpenChange={(open) => !open && setSelectedProgramId(null)}
+        program={selectedProgram ?? null}
+      />
     </Layout>
   );
 };
