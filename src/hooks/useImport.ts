@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { parseCSV, parsePrice, parseMultipleValues, parseTime, parseDate } from '@/lib/csvParser';
+import { parseCSV, parsePrice, parseMultipleValues, parseDateTimeFromItem } from '@/lib/csvParser';
 import { toast } from '@/hooks/use-toast';
 
 export interface RawDataRow {
@@ -9,6 +9,7 @@ export interface RawDataRow {
   price: number;
   programIds: string[];
   level: string;
+  category: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -16,14 +17,12 @@ export interface RawDataRow {
 }
 
 export interface ColumnMapping {
-  id: string;
-  name: string;
-  price: string;
-  programIds: string;
-  level: string;
-  date: string;
-  startTime: string;
-  endTime: string;
+  programId: string;   // ProgramID column - single or comma-separated
+  name: string;        // Item column - program/package name
+  price: string;       // Price column
+  category: string;    // Category column
+  dayTime: string;     // Day/Time column
+  level: string;       // Level column
 }
 
 export interface FormResponseRow {
@@ -56,19 +55,40 @@ export function parseRawData(csvText: string, mapping: ColumnMapping): RawDataRo
   const { rows } = parseCSV(csvText);
   
   return rows.map(row => {
-    const programIdsRaw = row[mapping.programIds] || '';
-    const programIds = parseMultipleValues(programIdsRaw);
-    const isPackage = programIds.length > 1;
+    const programIdRaw = row[mapping.programId] || '';
+    // Split by comma to detect if it's a package (multiple IDs)
+    const ids = programIdRaw.split(',').map(id => id.trim()).filter(id => id);
+    const isPackage = ids.length > 1;
+    
+    const itemName = row[mapping.name] || '';
+    const category = row[mapping.category] || '';
+    const level = row[mapping.level] || '';
+    const price = parsePrice(row[mapping.price]);
+    
+    // For programs, parse date/time from the Item column
+    // For packages, we don't need date/time
+    let date = '';
+    let startTime = '00:00:00';
+    let endTime = '00:00:00';
+    
+    if (!isPackage) {
+      // Parse date and time from Item column format like "Wednesday 1/28 | 9:00am - 10:30am"
+      const parsed = parseDateTimeFromItem(itemName);
+      date = parsed.date;
+      startTime = parsed.startTime;
+      endTime = parsed.endTime;
+    }
     
     return {
-      id: row[mapping.id] || '',
-      name: row[mapping.name] || '',
-      price: parsePrice(row[mapping.price]),
-      programIds: isPackage ? programIds : [],
-      level: row[mapping.level] || '',
-      date: parseDate(row[mapping.date]),
-      startTime: parseTime(row[mapping.startTime]),
-      endTime: parseTime(row[mapping.endTime]),
+      id: ids[0] || '', // First ID is the main identifier
+      name: itemName,
+      price,
+      programIds: isPackage ? ids : [], // For packages, store all IDs to link later
+      level,
+      category,
+      date,
+      startTime,
+      endTime,
       isPackage,
     };
   }).filter(row => row.id && row.name);
