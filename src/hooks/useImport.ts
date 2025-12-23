@@ -280,111 +280,139 @@ export function useImportFormResponses() {
   
   return useMutation({
     mutationFn: async (data: FormResponseRow[]) => {
-      // Get all programs and packages for matching
-      const { data: programs } = await supabase
-        .from('programs')
-        .select('id, name, original_id');
+      const batchSize = 10;
       
-      const { data: packages } = await supabase
-        .from('packages')
-        .select('id, name, original_id');
+      // Pre-fetch all reference data in parallel
+      const [programsResult, packagesResult, programPackagesResult, existingPlayersResult] = await Promise.all([
+        supabase.from('programs').select('id, name, original_id'),
+        supabase.from('packages').select('id, name, original_id'),
+        supabase.from('programs_packages').select('package_id, program_id'),
+        supabase.from('players').select('id, email'),
+      ]);
       
-      const { data: programPackages } = await supabase
-        .from('programs_packages')
-        .select('package_id, program_id');
+      const programs = programsResult.data || [];
+      const packages = packagesResult.data || [];
+      const programPackages = programPackagesResult.data || [];
+      const existingPlayers = existingPlayersResult.data || [];
       
       // Create lookup maps
       const programByName: Record<string, string> = {};
-      programs?.forEach(p => {
+      programs.forEach(p => {
         programByName[p.name.toLowerCase()] = p.id;
       });
       
       const packageByName: Record<string, { id: string; programIds: string[] }> = {};
-      packages?.forEach(pkg => {
+      packages.forEach(pkg => {
         const linkedPrograms = programPackages
-          ?.filter(pp => pp.package_id === pkg.id)
-          .map(pp => pp.program_id) || [];
+          .filter(pp => pp.package_id === pkg.id)
+          .map(pp => pp.program_id);
         packageByName[pkg.name.toLowerCase()] = {
           id: pkg.id,
           programIds: linkedPrograms,
         };
       });
       
-      let playersCreated = 0;
-      let registrationsCreated = 0;
-      const errors: string[] = [];
+      // Create player email lookup
+      const playerByEmail: Map<string, string> = new Map();
+      existingPlayers.forEach(p => {
+        if (p.email) playerByEmail.set(p.email.toLowerCase(), p.id);
+      });
       
-      for (const row of data) {
-        // Check if player exists by email
-        let playerId: string;
-        
+      // Step 1: Identify new players to create (unique emails only)
+      const newPlayersToCreate: Array<{ firstName: string; lastName: string; email: string | null; phone: string | null; rowIndex: number }> = [];
+      const seenEmails = new Set<string>();
+      
+      data.forEach((row, index) => {
         if (row.email) {
-          const { data: existingPlayer } = await supabase
-            .from('players')
-            .select('id')
-            .eq('email', row.email)
-            .maybeSingle();
-          
-          if (existingPlayer) {
-            playerId = existingPlayer.id;
-          } else {
-            const { data: newPlayer, error: playerError } = await supabase
-              .from('players')
-              .insert({
-                first_name: row.firstName,
-                last_name: row.lastName,
-                email: row.email,
-                phone: row.phone,
-              })
-              .select('id')
-              .single();
-            
-            if (playerError) {
-              errors.push(`Failed to create player ${row.firstName} ${row.lastName}: ${playerError.message}`);
-              continue;
-            }
-            playerId = newPlayer.id;
-            playersCreated++;
+          const emailLower = row.email.toLowerCase();
+          if (!playerByEmail.has(emailLower) && !seenEmails.has(emailLower)) {
+            seenEmails.add(emailLower);
+            newPlayersToCreate.push({
+              firstName: row.firstName,
+              lastName: row.lastName,
+              email: row.email,
+              phone: row.phone || null,
+              rowIndex: index,
+            });
           }
         } else {
-          // No email, create new player
-          const { data: newPlayer, error: playerError } = await supabase
-            .from('players')
-            .insert({
-              first_name: row.firstName,
-              last_name: row.lastName,
-              email: row.email || null,
-              phone: row.phone || null,
-            })
-            .select('id')
-            .single();
-          
-          if (playerError) {
-            errors.push(`Failed to create player ${row.firstName} ${row.lastName}: ${playerError.message}`);
-            continue;
+          // No email - always create new player
+          newPlayersToCreate.push({
+            firstName: row.firstName,
+            lastName: row.lastName,
+            email: null,
+            phone: row.phone || null,
+            rowIndex: index,
+          });
+        }
+      });
+      
+      // Step 2: Batch create new players
+      let playersCreated = 0;
+      const errors: string[] = [];
+      
+      for (let i = 0; i < newPlayersToCreate.length; i += batchSize) {
+        const batch = newPlayersToCreate.slice(i, i + batchSize);
+        
+        const results = await Promise.all(
+          batch.map(async (p) => {
+            const { data: newPlayer, error } = await supabase
+              .from('players')
+              .insert({
+                first_name: p.firstName,
+                last_name: p.lastName,
+                email: p.email,
+                phone: p.phone,
+              })
+              .select('id, email')
+              .single();
+            
+            if (error) {
+              return { success: false, error: `Failed to create player ${p.firstName} ${p.lastName}: ${error.message}` };
+            }
+            return { success: true, player: newPlayer };
+          })
+        );
+        
+        results.forEach(r => {
+          if (r.success && r.player) {
+            playersCreated++;
+            if (r.player.email) {
+              playerByEmail.set(r.player.email.toLowerCase(), r.player.id);
+            }
+          } else if (!r.success && r.error) {
+            errors.push(r.error);
           }
-          playerId = newPlayer.id;
-          playersCreated++;
+        });
+      }
+      
+      // Step 3: Build all registrations
+      const registrationsToCreate: Array<{ player_id: string; program_id: string | null; package_id: string | null }> = [];
+      
+      for (const row of data) {
+        let playerId: string | undefined;
+        
+        if (row.email) {
+          playerId = playerByEmail.get(row.email.toLowerCase());
         }
         
-        // Process registrations
+        if (!playerId) {
+          // Skip if we couldn't find/create the player
+          continue;
+        }
+        
         for (const regString of row.registrations) {
           const regLower = regString.toLowerCase();
           
           // Check if it's a package
           const pkg = packageByName[regLower];
           if (pkg) {
-            // Create registrations for each program in the package
             for (const programId of pkg.programIds) {
-              const { error: regError } = await supabase
-                .from('registrations')
-                .insert({
-                  player_id: playerId,
-                  program_id: programId,
-                  package_id: pkg.id,
-                });
-              
-              if (!regError) registrationsCreated++;
+              registrationsToCreate.push({
+                player_id: playerId,
+                program_id: programId,
+                package_id: pkg.id,
+              });
             }
             continue;
           }
@@ -392,20 +420,29 @@ export function useImportFormResponses() {
           // Check if it's a program
           const programId = programByName[regLower];
           if (programId) {
-            const { error: regError } = await supabase
-              .from('registrations')
-              .insert({
-                player_id: playerId,
-                program_id: programId,
-                package_id: null,
-              });
-            
-            if (!regError) registrationsCreated++;
+            registrationsToCreate.push({
+              player_id: playerId,
+              program_id: programId,
+              package_id: null,
+            });
             continue;
           }
           
           errors.push(`Unmatched registration: "${regString}" for ${row.firstName} ${row.lastName}`);
         }
+      }
+      
+      // Step 4: Batch create registrations
+      let registrationsCreated = 0;
+      
+      for (let i = 0; i < registrationsToCreate.length; i += batchSize) {
+        const batch = registrationsToCreate.slice(i, i + batchSize);
+        
+        const results = await Promise.all(
+          batch.map(reg => supabase.from('registrations').insert(reg))
+        );
+        
+        registrationsCreated += results.filter(r => !r.error).length;
       }
       
       return { playersCreated, registrationsCreated, errors };
