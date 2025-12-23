@@ -212,3 +212,30 @@ export function useRemoveProgramFromPackage() {
     },
   });
 }
+
+export function usePackageRegistrationsWithPlayers(packageId: string) {
+  return useQuery({
+    queryKey: ["package-registrations-players", packageId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("registrations")
+        .select(`
+          id,
+          player_id,
+          players(id, first_name, last_name, credit)
+        `)
+        .eq("package_id", packageId);
+      if (error) throw error;
+      
+      // Return unique players (a player might have multiple registrations in the package)
+      const uniquePlayers = new Map<string, { id: string; first_name: string; last_name: string; credit: number }>();
+      for (const reg of data ?? []) {
+        if (reg.players && !uniquePlayers.has(reg.player_id)) {
+          uniquePlayers.set(reg.player_id, reg.players as { id: string; first_name: string; last_name: string; credit: number });
+        }
+      }
+      return Array.from(uniquePlayers.values());
+    },
+    enabled: !!packageId,
+  });
+}
