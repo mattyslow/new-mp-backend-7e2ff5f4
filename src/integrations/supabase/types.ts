@@ -74,6 +74,7 @@ export type Database = {
           id: string
           location_id: string | null
           name: string
+          original_id: string | null
           price: number
         }
         Insert: {
@@ -81,6 +82,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           name: string
+          original_id?: string | null
           price?: number
         }
         Update: {
@@ -88,6 +90,7 @@ export type Database = {
           id?: string
           location_id?: string | null
           name?: string
+          original_id?: string | null
           price?: number
         }
         Relationships: [
@@ -141,6 +144,7 @@ export type Database = {
           location_id: string | null
           max_registrations: number
           name: string
+          original_id: string | null
           price: number
           season_id: string | null
           start_time: string
@@ -155,6 +159,7 @@ export type Database = {
           location_id?: string | null
           max_registrations?: number
           name: string
+          original_id?: string | null
           price?: number
           season_id?: string | null
           start_time: string
@@ -169,6 +174,7 @@ export type Database = {
           location_id?: string | null
           max_registrations?: number
           name?: string
+          original_id?: string | null
           price?: number
           season_id?: string | null
           start_time?: string

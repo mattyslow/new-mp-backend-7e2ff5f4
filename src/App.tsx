@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Players from "./pages/Players";
 import Programs from "./pages/Programs";
 import Registrations from "./pages/Registrations";
+import Import from "./pages/Import";
 import { LevelsSettings, CategoriesSettings, LocationsSettings, SeasonsSettings } from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/settings/categories" element={<CategoriesSettings />} />
           <Route path="/settings/locations" element={<LocationsSettings />} />
           <Route path="/settings/seasons" element={<SeasonsSettings />} />
+          <Route path="/import" element={<Import />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
