@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Settings,
   Upload,
+  Grid3X3,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -24,6 +25,7 @@ const mainItems = [
   { title: "Players", url: "/players", icon: Users },
   { title: "Programs", url: "/programs", icon: Calendar },
   { title: "Registrations", url: "/registrations", icon: ClipboardList },
+  { title: "Reg Counter", url: "/registrations-counter", icon: Grid3X3 },
   { title: "Import Data", url: "/import", icon: Upload },
 ];
 
