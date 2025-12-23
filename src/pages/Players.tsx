@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function Players() {
+  const navigate = useNavigate();
   const { data: players, isLoading } = usePlayers();
   const deletePlayer = useDeletePlayer();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -89,6 +91,7 @@ export default function Players() {
           columns={columns}
           searchKey="last_name"
           emptyMessage="No players found. Add your first player to get started."
+          onRowClick={(player) => navigate(`/players/${player.id}`)}
         />
       )}
 

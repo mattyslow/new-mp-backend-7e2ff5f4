@@ -100,8 +100,8 @@ export function usePlayerRegistrations(playerId: string) {
         .from("registrations")
         .select(`
           *,
-          programs(name, date),
-          packages(name)
+          programs(id, name, date, start_time, end_time, price, location_id, levels(id, name), categories(id, name), locations(id, name)),
+          packages(id, name, price)
         `)
         .eq("player_id", playerId)
         .order("created_at", { ascending: false });
