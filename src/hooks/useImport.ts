@@ -237,15 +237,23 @@ export function useImportProgramsCapacity() {
   
   return useMutation({
     mutationFn: async (data: ProgramsCapacityRow[]) => {
+      const batchSize = 10;
       let updated = 0;
       
-      for (const row of data) {
-        const { error } = await supabase
-          .from('programs')
-          .update({ max_registrations: row.maxRegistrations })
-          .eq('original_id', row.originalId);
+      // Process in parallel batches of 10 to avoid overwhelming the API
+      for (let i = 0; i < data.length; i += batchSize) {
+        const batch = data.slice(i, i + batchSize);
         
-        if (!error) updated++;
+        const results = await Promise.all(
+          batch.map(row =>
+            supabase
+              .from('programs')
+              .update({ max_registrations: row.maxRegistrations })
+              .eq('original_id', row.originalId)
+          )
+        );
+        
+        updated += results.filter(r => !r.error).length;
       }
       
       return { updated };
