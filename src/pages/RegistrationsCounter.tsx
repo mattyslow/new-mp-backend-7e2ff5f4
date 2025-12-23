@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import { Layout } from "@/components/Layout";
 import { PageHeader } from "@/components/PageHeader";
-import { useRegistrationCounter, RegistrationRow } from "@/hooks/useRegistrationCounter";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useRegistrationCounter } from "@/hooks/useRegistrationCounter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -10,16 +9,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const dayColors: Record<string, string> = {
-  Monday: "bg-yellow-100 dark:bg-yellow-900/30",
-  Tuesday: "bg-purple-100 dark:bg-purple-900/30",
-  Wednesday: "bg-green-100 dark:bg-green-900/30",
-  Thursday: "bg-blue-100 dark:bg-blue-900/30",
-  Friday: "bg-pink-100 dark:bg-pink-900/30",
-  Saturday: "bg-orange-100 dark:bg-orange-900/30",
-  Sunday: "bg-gray-100 dark:bg-gray-800/50",
-};
 
 const getCellColor = (count: number, max: number) => {
   if (max === 0) return "";
@@ -36,21 +25,14 @@ const RegistrationsCounter = () => {
   
   const { rows, weekCount, weekDates, isLoading } = useRegistrationCounter(startDate, endDate);
 
-  // Group rows by day for visual grouping
-  const groupedRows = useMemo(() => {
-    const groups: { dayName: string; rows: RegistrationRow[] }[] = [];
-    let currentDay = "";
-    
-    rows.forEach((row) => {
-      if (row.dayName !== currentDay) {
-        currentDay = row.dayName;
-        groups.push({ dayName: currentDay, rows: [row] });
-      } else {
-        groups[groups.length - 1].rows.push(row);
-      }
+  // Track first occurrence of each day
+  const rowsWithDayDisplay = useMemo(() => {
+    const seenDays = new Set<string>();
+    return rows.map((row) => {
+      const isFirstOfDay = !seenDays.has(row.dayName);
+      if (isFirstOfDay) seenDays.add(row.dayName);
+      return { ...row, isFirstOfDay };
     });
-    
-    return groups;
   }, [rows]);
 
   return (
@@ -60,11 +42,11 @@ const RegistrationsCounter = () => {
         description="View registration counts across weekly program series"
       />
 
-      <div className="flex gap-4 mb-6">
+      <div className="flex gap-2 mb-4">
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("w-[200px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left font-normal text-xs", !startDate && "text-muted-foreground")}>
+              <CalendarIcon className="mr-1.5 h-3 w-3" />
               {startDate ? format(startDate, "MMM d, yyyy") : "Start date"}
             </Button>
           </PopoverTrigger>
@@ -75,8 +57,8 @@ const RegistrationsCounter = () => {
 
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("w-[200px] justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
+            <Button variant="outline" size="sm" className={cn("w-[160px] justify-start text-left font-normal text-xs", !endDate && "text-muted-foreground")}>
+              <CalendarIcon className="mr-1.5 h-3 w-3" />
               {endDate ? format(endDate, "MMM d, yyyy") : "End date"}
             </Button>
           </PopoverTrigger>
@@ -86,78 +68,82 @@ const RegistrationsCounter = () => {
         </Popover>
 
         {(startDate || endDate) && (
-          <Button variant="ghost" onClick={() => { setStartDate(undefined); setEndDate(undefined); }}>
+          <Button variant="ghost" size="sm" onClick={() => { setStartDate(undefined); setEndDate(undefined); }}>
             Clear
           </Button>
         )}
       </div>
 
       {isLoading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full" />
+        <div className="space-y-1">
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="h-6 w-full" />
         </div>
       ) : rows.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
+        <div className="text-center py-8 text-muted-foreground text-sm">
           No programs found for the selected date range.
         </div>
       ) : (
-        <div className="border rounded-lg overflow-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead className="sticky left-0 bg-muted/50 z-10 min-w-[80px]">Day</TableHead>
-                <TableHead className="sticky left-[80px] bg-muted/50 z-10 min-w-[200px]">Day/Time</TableHead>
-                <TableHead className="sticky left-[280px] bg-muted/50 z-10 min-w-[150px]">Category</TableHead>
-                <TableHead className="sticky left-[430px] bg-muted/50 z-10 min-w-[200px]">Level</TableHead>
+        <div className="border rounded-lg overflow-auto text-xs">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-muted/50">
+                <th className="sticky left-0 bg-muted/50 z-10 min-w-[180px] h-7 px-2 text-left font-medium text-muted-foreground">Day/Time</th>
+                <th className="sticky left-[180px] bg-muted/50 z-10 min-w-[100px] h-7 px-2 text-left font-medium text-muted-foreground">Category</th>
+                <th className="sticky left-[280px] bg-muted/50 z-10 min-w-[160px] h-7 px-2 text-left font-medium text-muted-foreground">Level</th>
                 {weekDates.map((date, index) => (
-                  <TableHead key={index} className="text-center min-w-[80px]">
-                    <div className="font-semibold">Week {index + 1}</div>
-                    <div className="text-xs text-muted-foreground font-normal">
-                      {format(date, "MMM d")}
+                  <th key={index} className="text-center min-w-[50px] h-7 px-1 font-medium text-muted-foreground">
+                    <div>W{index + 1}</div>
+                    <div className="text-[10px] font-normal">
+                      {format(date, "M/d")}
                     </div>
-                  </TableHead>
+                  </th>
                 ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {groupedRows.map((group) => (
-                group.rows.map((row, rowIndex) => (
-                  <TableRow key={row.seriesKey} className={dayColors[row.dayName]}>
-                    <TableCell className={cn("sticky left-0 z-10 font-medium", dayColors[row.dayName])}>
-                      {rowIndex === 0 ? row.dayName : ""}
-                    </TableCell>
-                    <TableCell className={cn("sticky left-[80px] z-10", dayColors[row.dayName])}>
-                      {row.dayTime}
-                    </TableCell>
-                    <TableCell className={cn("sticky left-[280px] z-10", dayColors[row.dayName])}>
-                      {row.category}
-                    </TableCell>
-                    <TableCell className={cn("sticky left-[430px] z-10", dayColors[row.dayName])}>
-                      {row.level}
-                    </TableCell>
-                    {Array.from({ length: weekCount }, (_, weekIndex) => {
-                      const weekNum = weekIndex + 1;
-                      const weekEntry = row.weekData.find((w) => w.weekNumber === weekNum);
-                      return (
-                        <TableCell 
-                          key={weekIndex} 
-                          className={cn(
-                            "text-center",
-                            weekEntry ? getCellColor(weekEntry.count, row.maxRegistrations) : ""
-                          )}
-                          title={weekEntry ? `${format(new Date(weekEntry.date + "T00:00:00"), "MMM d, yyyy")}: ${weekEntry.count}/${row.maxRegistrations}` : "No session"}
-                        >
-                          {weekEntry ? weekEntry.count : "—"}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                ))
+              </tr>
+            </thead>
+            <tbody>
+              {rowsWithDayDisplay.map((row) => (
+                <tr 
+                  key={row.seriesKey} 
+                  className={cn(
+                    "border-b border-border/50 hover:bg-muted/30",
+                    row.isFirstOfDay && "border-t-2 border-t-border"
+                  )}
+                >
+                  <td className="sticky left-0 z-10 bg-background py-1 px-2">
+                    {row.isFirstOfDay ? (
+                      <span><span className="font-semibold">{row.dayName}</span> {row.dayTime.replace(/^[A-Za-z]+s?\s*/, '')}</span>
+                    ) : (
+                      <span className="pl-[1ch]">{row.dayTime.replace(/^[A-Za-z]+s?\s*/, '')}</span>
+                    )}
+                  </td>
+                  <td className="sticky left-[180px] z-10 bg-background py-1 px-2">
+                    {row.category}
+                  </td>
+                  <td className="sticky left-[280px] z-10 bg-background py-1 px-2">
+                    {row.level}
+                  </td>
+                  {Array.from({ length: weekCount }, (_, weekIndex) => {
+                    const weekNum = weekIndex + 1;
+                    const weekEntry = row.weekData.find((w) => w.weekNumber === weekNum);
+                    return (
+                      <td 
+                        key={weekIndex} 
+                        className={cn(
+                          "text-center py-1 px-1",
+                          weekEntry ? getCellColor(weekEntry.count, row.maxRegistrations) : "text-muted-foreground/50"
+                        )}
+                        title={weekEntry ? `${format(new Date(weekEntry.date + "T00:00:00"), "MMM d, yyyy")}: ${weekEntry.count}/${row.maxRegistrations}` : "No session"}
+                      >
+                        {weekEntry ? weekEntry.count : "—"}
+                      </td>
+                    );
+                  })}
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       )}
     </Layout>
