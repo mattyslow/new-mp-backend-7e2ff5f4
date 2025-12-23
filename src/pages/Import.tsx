@@ -77,7 +77,8 @@ export default function Import() {
     setFile(file);
     const text = await file.text();
     const { headers } = parseCSV(text);
-    setHeaders(headers);
+    // Filter out empty headers to prevent Select.Item error
+    setHeaders(headers.filter(h => h.trim() !== ''));
   }, []);
 
   const handleRawDataParse = async () => {
