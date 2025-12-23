@@ -109,6 +109,54 @@ export function useProgramPackages(programId: string) {
   });
 }
 
+export function useProgramRegistrationsWithPlayers(programId: string) {
+  return useQuery({
+    queryKey: ["program-registrations-players", programId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("registrations")
+        .select(`
+          id,
+          player_id,
+          players(id, first_name, last_name, credit)
+        `)
+        .eq("program_id", programId);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!programId,
+  });
+}
+
+export function useIssueProgramCredits() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (credits: { playerId: string; amount: number }[]) => {
+      for (const { playerId, amount } of credits) {
+        const { data: player, error: fetchError } = await supabase
+          .from("players")
+          .select("credit")
+          .eq("id", playerId)
+          .single();
+        if (fetchError) throw fetchError;
+        
+        const newCredit = Number(player?.credit ?? 0) + amount;
+        const { error: updateError } = await supabase
+          .from("players")
+          .update({ credit: newCredit })
+          .eq("id", playerId);
+        if (updateError) throw updateError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["players"] });
+    },
+    onError: (error) => {
+      toast.error("Failed to issue credits: " + error.message);
+    },
+  });
+}
+
 export function useCreateProgram() {
   const queryClient = useQueryClient();
   return useMutation({
