@@ -34,7 +34,7 @@ interface DeleteRegistrationDialogProps {
     firstName: string;
     lastName: string;
     credit: number;
-  };
+  } | null;
 }
 
 export function DeleteRegistrationDialog({
@@ -58,10 +58,11 @@ export function DeleteRegistrationDialog({
     return parseFloat(customAmount) || 0;
   }, [creditType, customAmount, registration]);
 
-  const newBalance = player.credit + (issueCredits ? creditAmount : 0);
+  const playerCredit = player?.credit ?? 0;
+  const newBalance = playerCredit + (issueCredits ? creditAmount : 0);
 
   const handleDelete = async () => {
-    if (!registration) return;
+    if (!registration || !player) return;
 
     try {
       if (issueCredits && creditAmount > 0) {
@@ -90,7 +91,7 @@ export function DeleteRegistrationDialog({
           <AlertDialogDescription asChild>
             <div className="space-y-4">
               <p>
-                Remove <strong>{player.firstName} {player.lastName}</strong> from{" "}
+                Remove <strong>{player?.firstName} {player?.lastName}</strong> from{" "}
                 <strong>"{registration?.programName}"</strong>?
               </p>
 
@@ -98,7 +99,7 @@ export function DeleteRegistrationDialog({
                 <div className="flex items-center gap-2 text-sm">
                   <CreditCard className="h-4 w-4 text-muted-foreground" />
                   <span className="text-foreground">Current credit balance:</span>
-                  <span className="font-medium text-foreground">${player.credit.toFixed(2)}</span>
+                  <span className="font-medium text-foreground">${playerCredit.toFixed(2)}</span>
                 </div>
               </div>
 
