@@ -99,6 +99,20 @@ export function parseDate(dateStr: string): string {
 }
 
 /**
+ * Normalize text for matching - handles different dashes, spaces, unicode chars
+ */
+export function normalizeForMatching(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[\u2013\u2014\u2010\u2011\u2012]/g, '-') // various dashes → hyphen
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")       // fancy single quotes → apostrophe
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')       // fancy double quotes → quote
+    .replace(/\s+/g, ' ')                              // collapse multiple spaces
+    .replace(/[^\x20-\x7E]/g, '')                      // remove non-ASCII chars
+    .trim();
+}
+
+/**
  * Parse date and time from Item column format like:
  * "Wednesday 1/28 | 9:00am - 10:30am (3.0-3.5)"
  * "Wednesday 2/4 | 9:00am - 10:30am (3.0-3.5)"

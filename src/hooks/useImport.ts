@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { parseCSV, parsePrice, parseMultipleValues, parseDateTimeFromItem } from '@/lib/csvParser';
+import { parseCSV, parsePrice, parseMultipleValues, parseDateTimeFromItem, normalizeForMatching } from '@/lib/csvParser';
 import { toast } from '@/hooks/use-toast';
 
 export interface RawDataRow {
@@ -298,21 +298,23 @@ export function useImportFormResponses() {
       const programPackages = programPackagesResult.data || [];
       const existingPlayers = existingPlayersResult.data || [];
       
-      // Create lookup maps
+      // Create lookup maps using normalized keys for robust matching
       const programByName: Record<string, string> = {};
+      const programByOriginalId: Record<string, string> = {};
       programs.forEach(p => {
-        programByName[p.name.toLowerCase()] = p.id;
+        programByName[normalizeForMatching(p.name)] = p.id;
+        if (p.original_id) programByOriginalId[p.original_id.toLowerCase()] = p.id;
       });
       
       const packageByName: Record<string, { id: string; programIds: string[] }> = {};
+      const packageByOriginalId: Record<string, { id: string; programIds: string[] }> = {};
       packages.forEach(pkg => {
         const linkedPrograms = programPackages
           .filter(pp => pp.package_id === pkg.id)
           .map(pp => pp.program_id);
-        packageByName[pkg.name.toLowerCase()] = {
-          id: pkg.id,
-          programIds: linkedPrograms,
-        };
+        const pkgData = { id: pkg.id, programIds: linkedPrograms };
+        packageByName[normalizeForMatching(pkg.name)] = pkgData;
+        if (pkg.original_id) packageByOriginalId[pkg.original_id.toLowerCase()] = pkgData;
       });
       
       // Create player email lookup
@@ -405,10 +407,11 @@ export function useImportFormResponses() {
         }
         
         for (const regString of row.registrations) {
-          const regLower = regString.toLowerCase();
+          const regNormalized = normalizeForMatching(regString);
+          const regLower = regString.toLowerCase().trim();
           
-          // Check if it's a package
-          const pkg = packageByName[regLower];
+          // Check if it's a package (try normalized name first, then original_id)
+          let pkg = packageByName[regNormalized] || packageByOriginalId[regLower];
           if (pkg) {
             for (const programId of pkg.programIds) {
               registrationsToCreate.push({
@@ -420,8 +423,8 @@ export function useImportFormResponses() {
             continue;
           }
           
-          // Check if it's a program
-          const programId = programByName[regLower];
+          // Check if it's a program (try normalized name first, then original_id)
+          let programId = programByName[regNormalized] || programByOriginalId[regLower];
           if (programId) {
             registrationsToCreate.push({
               player_id: playerId,
