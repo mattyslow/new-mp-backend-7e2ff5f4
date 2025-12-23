@@ -38,7 +38,7 @@ export default function Import() {
   const [rawDataHeaders, setRawDataHeaders] = useState<string[]>([]);
   const [rawDataParsed, setRawDataParsed] = useState<RawDataRow[]>([]);
   const [rawDataMapping, setRawDataMapping] = useState<ColumnMapping>({
-    id: '', name: '', price: '', programIds: '', level: '', date: '', startTime: '', endTime: ''
+    programId: '', name: '', price: '', category: '', dayTime: '', level: ''
   });
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [selectedSeason, setSelectedSeason] = useState<string>('');
@@ -205,8 +205,8 @@ export default function Import() {
               {rawDataHeaders.length > 0 && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>ID Column</Label>
-                    <Select value={rawDataMapping.id} onValueChange={(v) => setRawDataMapping(m => ({ ...m, id: v }))}>
+                    <Label>ProgramID Column</Label>
+                    <Select value={rawDataMapping.programId} onValueChange={(v) => setRawDataMapping(m => ({ ...m, programId: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
                       <SelectContent>
                         {rawDataHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
@@ -214,7 +214,7 @@ export default function Import() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Name Column</Label>
+                    <Label>Item (Name) Column</Label>
                     <Select value={rawDataMapping.name} onValueChange={(v) => setRawDataMapping(m => ({ ...m, name: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
                       <SelectContent>
@@ -232,8 +232,17 @@ export default function Import() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Program IDs Column (for packages)</Label>
-                    <Select value={rawDataMapping.programIds} onValueChange={(v) => setRawDataMapping(m => ({ ...m, programIds: v }))}>
+                    <Label>Category Column</Label>
+                    <Select value={rawDataMapping.category} onValueChange={(v) => setRawDataMapping(m => ({ ...m, category: v }))}>
+                      <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
+                      <SelectContent>
+                        {rawDataHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Day/Time Column</Label>
+                    <Select value={rawDataMapping.dayTime} onValueChange={(v) => setRawDataMapping(m => ({ ...m, dayTime: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
                       <SelectContent>
                         {rawDataHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
@@ -243,33 +252,6 @@ export default function Import() {
                   <div>
                     <Label>Level Column</Label>
                     <Select value={rawDataMapping.level} onValueChange={(v) => setRawDataMapping(m => ({ ...m, level: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
-                      <SelectContent>
-                        {rawDataHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Date Column</Label>
-                    <Select value={rawDataMapping.date} onValueChange={(v) => setRawDataMapping(m => ({ ...m, date: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
-                      <SelectContent>
-                        {rawDataHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Start Time Column</Label>
-                    <Select value={rawDataMapping.startTime} onValueChange={(v) => setRawDataMapping(m => ({ ...m, startTime: v }))}>
-                      <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
-                      <SelectContent>
-                        {rawDataHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>End Time Column</Label>
-                    <Select value={rawDataMapping.endTime} onValueChange={(v) => setRawDataMapping(m => ({ ...m, endTime: v }))}>
                       <SelectTrigger><SelectValue placeholder="Select column" /></SelectTrigger>
                       <SelectContent>
                         {rawDataHeaders.map(h => <SelectItem key={h} value={h}>{h}</SelectItem>)}
@@ -304,7 +286,7 @@ export default function Import() {
               )}
 
               {/* Parse Button */}
-              {rawDataHeaders.length > 0 && rawDataMapping.id && rawDataMapping.name && (
+              {rawDataHeaders.length > 0 && rawDataMapping.programId && rawDataMapping.name && (
                 <Button onClick={handleRawDataParse} variant="outline">
                   Preview Data
                 </Button>

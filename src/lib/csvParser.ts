@@ -97,3 +97,49 @@ export function parseDate(dateStr: string): string {
   
   return new Date().toISOString().split('T')[0];
 }
+
+/**
+ * Parse date and time from Item column format like:
+ * "Wednesday 1/28 | 9:00am - 10:30am (3.0-3.5)"
+ * "Wednesday 2/4 | 9:00am - 10:30am (3.0-3.5)"
+ * Returns { date: "2025-01-28", startTime: "09:00:00", endTime: "10:30:00" }
+ */
+export function parseDateTimeFromItem(itemStr: string): {
+  date: string;
+  startTime: string;
+  endTime: string;
+} {
+  const defaultResult = {
+    date: new Date().toISOString().split('T')[0],
+    startTime: '00:00:00',
+    endTime: '00:00:00',
+  };
+  
+  if (!itemStr) return defaultResult;
+  
+  // Try to extract date pattern like "1/28" or "2/4"
+  const dateMatch = itemStr.match(/(\d{1,2})\/(\d{1,2})/);
+  let date = defaultResult.date;
+  
+  if (dateMatch) {
+    const month = parseInt(dateMatch[1]);
+    const day = parseInt(dateMatch[2]);
+    const currentYear = new Date().getFullYear();
+    // Use next year if the date seems to be in the past
+    const tentativeDate = new Date(currentYear, month - 1, day);
+    const year = tentativeDate < new Date() ? currentYear + 1 : currentYear;
+    date = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  }
+  
+  // Try to extract time pattern like "9:00am - 10:30am" or "5:30pm - 6:30pm"
+  const timeMatch = itemStr.match(/(\d{1,2}:\d{2}\s*[ap]m)\s*-\s*(\d{1,2}:\d{2}\s*[ap]m)/i);
+  let startTime = defaultResult.startTime;
+  let endTime = defaultResult.endTime;
+  
+  if (timeMatch) {
+    startTime = parseTime(timeMatch[1]);
+    endTime = parseTime(timeMatch[2]);
+  }
+  
+  return { date, startTime, endTime };
+}
